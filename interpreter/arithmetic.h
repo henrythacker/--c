@@ -1,5 +1,5 @@
-#ifndef __OUTP_H
-#define __OUTP_H
+#ifndef __ARITH_H
+#define __ARITH_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,8 +10,6 @@
 #include "environment.h"
 #include "conversion.h"
 
-void fatal(char *);
-void debug(char *);
-void print_return_value(environment *, value *);
+value *arithmetic(environment *, int, value *, value *);
 
 #endif

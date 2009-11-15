@@ -7,6 +7,7 @@
 #include "C.tab.h"
 #include "nodes.h"
 #include "token.h"
+#include "arithmetic.h"
 #include "output.h"
 #include "conversion.h"
 #include "environment.h"

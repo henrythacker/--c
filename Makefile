@@ -1,7 +1,7 @@
 # makefile modified by Henry Thacker
 VPATH = frontend interpreter
-OBJS = lex.yy.o C.tab.o symbol_table.o nodes.o main.o interpreter.o environment.o conversion.o output.o
-SRCS = lex.yy.c C.tab.c symbol_table.c nodes.c main.c interpreter.c environment.c conversion.c output.c
+OBJS = lex.yy.o C.tab.o symbol_table.o nodes.o main.o interpreter.o environment.o conversion.o output.o arithmetic.o
+SRCS = lex.yy.c C.tab.c symbol_table.c nodes.c main.c interpreter.c environment.c conversion.c output.c arithmetic.c
 CPPFLAGS = -I interpreter -I frontend
 CC = gcc
 

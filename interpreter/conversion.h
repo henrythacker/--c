@@ -12,8 +12,10 @@
 #define UNDEFINED INT_MIN + 3
 
 char *to_string(value *);
-int to_int(value *);
+int to_int(environment *, value *);
 TOKEN * cast_from_node(NODE *);
+value *int_value(int);
+value *string_value(char *);
 int type_of(NODE *);
 
 #endif

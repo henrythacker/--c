@@ -8,8 +8,6 @@
 *
 */
 
-int t_count = 1;
-
 /* Assign variable */
 /* Assign data to identifier in env */
 void assign(environment *env, value *identifier, value *data) {
@@ -53,19 +51,40 @@ value *evaluate(environment *env, NODE *node, int flag) {
 	/* Check if we were passed an invalid node */
 	if (!node) return NULL;
 	switch(type_of(node)) {
+		case '+':
+		case '-':
+		case '*':
+		case '/':
+		case '%':
+		case '>':
+		case '<':
+		case NE_OP:
+		case EQ_OP:
+		case LE_OP:
+		case GE_OP:
+		case '!':
+			lhs = evaluate(env, node->left, flag);
+			rhs = evaluate(env, node->right, flag);
+			return arithmetic(env, type_of(node), lhs, rhs);
 		case '=':
 			lhs = evaluate(env, node->left, flag);
 			rhs = evaluate(env, node->right, flag);
+			if (rhs && rhs->value_type!=VT_INTEGR) {
+				if (rhs->value_type == VT_STRING) 
+					rhs = get(env, rhs->data.string_value);
+				else
+					rhs = get(env, rhs->identifier);
+			}
 			assign(env, lhs, rhs);
 			return NULL;
 		case IDENTIFIER:
-			return string_temporary(cast_from_node(node)->lexeme);
+			return string_value(cast_from_node(node)->lexeme);
 		case CONSTANT:
-			return int_temporary(cast_from_node(node)->value);
+			return int_value(cast_from_node(node)->value);
 		case VOID:
 		case FUNCTION:
 		case INT:
-			return int_temporary(type_of(node));
+			return int_value(type_of(node));
 		case LEAF:
 			return evaluate(env, node->left, flag);			
 		case 'D':
@@ -94,7 +113,7 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			/* RHS is fn name & params */
 			rhs = evaluate(env, node->right, flag);
 			/* Store return type */
-			rhs->data.func->return_type = to_int(lhs);
+			rhs->data.func->return_type = to_int(env, lhs);
 			return rhs;
 		case 'F':
 			/* FN name in LHS */
@@ -104,8 +123,12 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			return build_function(env, lhs, rhs);
 		case RETURN:
 			lhs = evaluate(env, node->left, flag);
-			if (lhs!=NULL && lhs->value_type!=VT_INTEGR) {
-				return get(env, to_string(lhs));
+			/* Provide lookup for non-constants */
+			if (lhs && lhs->value_type!=VT_INTEGR) {
+				if (lhs->value_type == VT_STRING) 
+					lhs = get(env, lhs->data.string_value);
+				else
+					lhs = get(env, lhs->identifier);
 			}
 			return lhs;
 		case '~':
@@ -134,30 +157,6 @@ value *evaluate(environment *env, NODE *node, int flag) {
 	}
 }
 
-/* Make a string temporary */
-value *string_temporary(char *val) {
-	value *tmp_value = calloc(1, sizeof(value));
-	char temporary_name[10];
-	sprintf(temporary_name, "t%d", t_count);
-	tmp_value->identifier = temporary_name;
-	tmp_value->value_type = VT_STRING;
-	tmp_value->data.string_value = (char *) malloc((sizeof(char) * strlen(val)) + 1);
-	strcpy(tmp_value->data.string_value, val);
-	t_count++;
-	return tmp_value;
-}
-
-value *int_temporary(int val) {
-	value *tmp_value = calloc(1, sizeof(value));
-	char temporary_name[10];
-	sprintf(temporary_name, "t%d", t_count);
-	tmp_value->identifier = temporary_name;
-	tmp_value->value_type = VT_INTEGR;
-	tmp_value->data.int_value = val;
-	t_count++;
-	return tmp_value;
-}
-
 /* Start the interpretation process at the top of the AST */
 void start_interpret(NODE *start) {
 	initial_environment = create_environment(NULL);
@@ -168,7 +167,7 @@ void start_interpret(NODE *start) {
 		debug("Entry point - int main() found");		
 		debug("Starting full interpretation...");
 		return_value = execute_fn(initial_environment, main_entry_point(initial_environment), INTERPRET_FULL);
-		print_return_value(return_value);
+		print_return_value(initial_environment, return_value);
 	}
 	else {
 		fatal("Entry point - int main() NOT found!");

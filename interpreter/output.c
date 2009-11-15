@@ -22,11 +22,11 @@ void debug(char *str) {
 }
 
 /* Print return value */
-void print_return_value(value *val) {
+void print_return_value(environment *env, value *val) {
 	if (!val) return;
 	switch(val->value_type) {
 		case VT_INTEGR:
-			printf("Result: %d\n", to_int(val));
+			if (to_int(env, val) != UNDEFINED) printf("Result: %d\n", to_int(env, val));
 			return;
 		case VT_FUNCTN:
 			printf("Result: %p\n", val->data.func->node_value);
