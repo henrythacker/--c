@@ -1,4 +1,4 @@
 int main() {
-	int a = 5, b = 9;
+	void a = 5, b = 9;
 	return a;
 }
