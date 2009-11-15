@@ -237,7 +237,10 @@ value *evaluate(environment *env, NODE *node, int flag) {
 		case ',':
 			lhs = evaluate(env, node->left, flag);
 			rhs = evaluate(env, node->right, flag);
-			return join(lhs, rhs);
+			if (lhs && rhs) {
+				return join(lhs, rhs);
+			}
+			return NULL;
 		case '~':
 			/* Variable Type */
 			lhs = evaluate(env, node->left, flag);
