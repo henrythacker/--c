@@ -188,25 +188,16 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			}
 			return NULL;
 		case 'D':
-			new_env = create_environment(env);
 			/* LHS is FN definition */
 			/* LHS is executed in current environment */
 			lhs = evaluate(env, node->left, flag);
-			if (flag==INTERPRET_FULL) {
-				/* RHS becomes evaluated fn body */
-				/* Executed in new environment */
-				//rhs = evaluate(new_env, node->right, INTERPRET_FN_SCAN);					
-			}
-			else {
-				rhs = NULL;
-			}
 			if (lhs!=NULL) {
 				/* Point function to the correct fn body */
  				lhs->data.func->node_value = node->right;
 				/* Store function definition in environment */
 				store_function(env, lhs);
 			}
-			return rhs;
+			return NULL;
 		case 'd':
 			/* LHS is the type */
 			lhs = evaluate(env, node->left, flag);
