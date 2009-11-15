@@ -46,14 +46,6 @@ value *build_function(environment *env, value *fn_name, value *param_list) {
 	return tmp_value;
 }
 
-/* Store a function in the environment */
-void store_function(environment *env, value *func) {
-	/* Check we were passed valid data */
-	if (!env || !func) return;
-	if (func->value_type!=VT_FUNCTN) return;
-	store(env, VT_FUNCTN, func->identifier, func);
-}
-
 /* Recursive evaluation of AST */
 value *evaluate(environment *env, NODE *node, int flag) {
 	value *lhs, *rhs, *temp;

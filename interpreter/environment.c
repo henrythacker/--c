@@ -113,6 +113,14 @@ void debug_environment(environment *env) {
 	}
 }
 
+/* Wrapper to store a function in the environment */
+void store_function(environment *env, value *func) {
+	/* Check we were passed valid data */
+	if (!env || !func) return;
+	if (func->value_type!=VT_FUNCTN) return;
+	store(env, VT_FUNCTN, func->identifier, func);
+}
+
 /* Store variable in environment */
 void store(environment *env, int value_type, char *identifier, value *val) {
 	/* Check entry will be valid */

@@ -60,6 +60,7 @@ value *find_leaf_value(value *);
 value *get(environment *, char *);
 void store(environment *, int, char *, value *);
 value *search(environment *, char *, int, int, int);
+void store_function(environment *, value *);
 int environment_hash(char *);
 
 #endif
