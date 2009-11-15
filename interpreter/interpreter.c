@@ -24,9 +24,16 @@ value *main_entry_point(environment *env) {
 value *execute_fn(environment *env, value *fn_reference, int flag) {
 	NODE *node;
 	environment *definition_env;
-	node = fn_reference->data.func->node_value;
-	definition_env = fn_reference->data.func->definition_env;
-	evaluate(definition_env, node, flag);
+	if (!fn_reference) {
+		fatal("Could not find function!");
+	}
+	else {
+		environment *new_env;
+		node = fn_reference->data.func->node_value;
+		definition_env = fn_reference->data.func->definition_env;
+		new_env = create_environment(definition_env);
+		return evaluate(new_env, node, flag);
+	}
 }
 
 /* Build a new function definition - don't store in environment yet though */
@@ -77,6 +84,14 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			}
 			assign(env, lhs, rhs);
 			return NULL;
+		case APPLY:
+			/* FN Name */
+			lhs = evaluate(env, node->left, flag);
+			/* Params */
+			rhs = evaluate(env, node->right, flag);
+			/* Lookup function */
+			temp = search(env, to_string(lhs), VT_FUNCTN, VT_ANY, 1);
+			return execute_fn(env, temp, flag);		
 		case IDENTIFIER:
 			return string_value(cast_from_node(node)->lexeme);
 		case CONSTANT:
