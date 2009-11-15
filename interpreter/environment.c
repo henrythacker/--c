@@ -102,18 +102,21 @@ void debug_print_value(value *val) {
 }
 
 /* Register actual parameters in environment */
-void define_parameters(environment *env, value *formal, value *actual) {
+void define_parameters(environment *env, value *formal, value *actual, environment *search_env) {
 	if (param_count(formal) != param_count(actual)) return;
 	value *formal_param = formal->data.func->params;
 	value *actual_param = actual;	
+	value *tmp;
+	int dealtWith = 0;
 	while(formal_param && actual_param) {
-		printf("FORMAL - %s\n", formal_param->identifier);
 		if (actual_param->value_type == VT_STRING) {
-			printf("ACTUAL: %s\n", actual_param->data.string_value, env);
-			actual_param = get(env, actual_param->data.string_value);
+			tmp = get(search_env, actual_param->data.string_value);
+			if (!tmp) fatal("Could not look-up parameter value");
+			store(env, tmp->value_type, formal_param->identifier, tmp, 1);
 		}
-		store(env, actual_param->value_type, formal_param->identifier, actual_param);
-		printf("store finished\n");
+		else {
+			store(env, actual_param->value_type, formal_param->identifier, actual_param, 1);
+		}
 		formal_param = formal_param->next;
 		actual_param = actual_param->next;
 	}
@@ -140,11 +143,11 @@ void store_function(environment *env, value *func) {
 	/* Check we were passed valid data */
 	if (!env || !func) return;
 	if (func->value_type!=VT_FUNCTN) return;
-	store(env, VT_FUNCTN, func->identifier, func);
+	store(env, VT_FUNCTN, func->identifier, func, 0);
 }
 
 /* Store variable in environment */
-void store(environment *env, int value_type, char *identifier, value *val) {
+void store(environment *env, int value_type, char *identifier, value *val, int is_param) {
 	value *new_value;
 	/* Check entry will be valid */
 	if (!identifier || !val || val->value_type==VT_STRING) return;
@@ -153,11 +156,11 @@ void store(environment *env, int value_type, char *identifier, value *val) {
 	/* The environment must be valid */
 	if (!env) return;
 	/* Check for redefinition */
-	if (value_type!=VT_FUNCTN && search(env, identifier, value_type, VT_ANY, 1)) {
+	if (value_type!=VT_FUNCTN && search(env, identifier, value_type, VT_ANY, 1) && !is_param) {
 		/* Value already exists - overwrite */
 		new_value = search(env, identifier, value_type, VT_ANY, 1);
 	}
-	else if (value_type==VT_FUNCTN && search(env, identifier, value_type, VT_ANY, 1)) {
+	else if (value_type==VT_FUNCTN && search(env, identifier, value_type, VT_ANY, 1) && !is_param) {
 		/* Functions may not be redefined if they exist anywhere in the local / global scope */
 		fatal("Function redefinition not allowed!");
 	}

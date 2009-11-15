@@ -12,7 +12,7 @@
 /* Assign data to identifier in env */
 void assign(environment *env, value *identifier, value *data) {
 	if (env==NULL || identifier==NULL) return;
-	store(env, data->value_type, to_string(identifier), data);
+	store(env, data->value_type, to_string(identifier), data, 0);
 }
 
 /* Count number of parameters */
@@ -59,13 +59,11 @@ value *execute_fn(environment *env, value *fn_reference, value *params, int flag
 			new_env = create_environment(definition_env);
 			/* Copy parameters into environment */
 			if (param_count(params) > 0) {
-				// PARAMS WHICH ENV???? *******************####################±!!!!!!!
-				define_parameters(new_env, fn_reference, params);
+				define_parameters(new_env, fn_reference, params, env);
 			}
 			return evaluate(new_env, node, flag);
 		}
 		else {
-			printf("%d, %d\n", param_count(params), param_count(fn_reference));
 			fatal("Formal and actual parameter count differs");
 			return NULL;
 		}
