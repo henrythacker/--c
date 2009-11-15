@@ -10,47 +10,6 @@
 
 int t_count = 1;
 
-/* NODE -> TOKEN CAST */
-TOKEN * cast_from_node(NODE *node) {
-	return (node==NULL ? NULL : (TOKEN *)node);
-}
-
-/* Return type of node */
-int type_of(NODE *node) {
-	if (node==NULL) {
-		return -1;
-	}
-	return node->type;
-}
-
-/* Fatal error */
-void fatal(char *str) {
-	printf("FATAL: %s\n", str);
-	exit(-1);
-}
-
-/* Print out debug info */
-void debug(char *str) {
-	if (DEBUG_ON) {
-		printf("%s\n", str);
-	}
-}
-
-/* Print return value */
-void print_return_value(value *val) {
-	if (!val) return;
-	switch(val->value_type) {
-		case VT_INTEGR:
-			printf("Result: %d\n", to_int(val));
-			return;
-		case VT_FUNCTN:
-			printf("Result: %p\n", val->data.func->node_value);
-			return;
-		default:
-			return;
-	}
-}
-
 /* Assign variable */
 /* Assign data to identifier in env */
 void assign(environment *env, value *identifier, value *data) {
@@ -222,17 +181,4 @@ void start_interpret(NODE *start) {
 	else {
 		fatal("Entry point - int main() NOT found!");
 	}
-}
-
-/* ==== VALUE -> C TYPE UTILITIES ==== */
-char *to_string(value *val) {
-	if (val==NULL) return NULL;
-	if (val->value_type!=VT_STRING) return NULL;
-	return val->data.string_value;
-}
-
-int to_int(value *val) {
-	if (val==NULL) return UNDEFINED;
-	if (val->value_type!=VT_INTEGR) return UNDEFINED;
-	return val->data.int_value;
 }

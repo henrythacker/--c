@@ -7,13 +7,14 @@
 #include "C.tab.h"
 #include "nodes.h"
 #include "token.h"
+#include "output.h"
+#include "conversion.h"
 #include "environment.h"
 
 /* Interpretation flags */
 #define INTERPRET_FULL INT_MIN + 1
 #define INTERPRET_FN_SCAN INT_MIN + 2
 #define INTERPRET_PARAMS INT_MIN + 3
-#define UNDEFINED INT_MIN + 3
 
 /* Vars */
 environment *initial_environment;
