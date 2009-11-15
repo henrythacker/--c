@@ -27,6 +27,11 @@
 /* Any type - special type used in searches */
 #define VT_ANY INT_MIN + 5
 
+/* Special value which stores last if evaluation in environment */
+#define IF_EVAL_SYMBOL "$IF"
+#define CONTINUE_EVAL_SYMBOL "$CONTINUE"
+#define BREAK_EVAL_SYMBOL "$BREAK"
+
 /* Value structure */
 typedef struct value {
 	char *identifier;
@@ -58,6 +63,7 @@ typedef struct function_declaration {
 environment *create_environment(environment *);
 value *find_leaf_value(value *);
 value *get(environment *, char *);
+value *last_if_evaluation(environment *);
 void store(environment *, int, char *, value *);
 value *search(environment *, char *, int, int, int);
 void store_function(environment *, value *);

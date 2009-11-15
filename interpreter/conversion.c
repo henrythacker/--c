@@ -62,11 +62,12 @@ int to_int(environment *env, value *val) {
 	if (val->value_type==VT_STRING && env) {
 		/* It might be a variable that we should resolve */
 		val = search(env, val->data.string_value, VT_INTEGR, VT_ANY, 1);
-		if (!val) return UNDEFINED;
+		if (!val) fatal("Integer value expected");
 		return val->data.int_value;
 	}
 	else if (val->value_type==VT_INTEGR) {
 		return val->data.int_value;		
 	}
+	fatal("Integer value expected");
 	return UNDEFINED;
 }

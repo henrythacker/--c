@@ -59,6 +59,10 @@ value *search(environment *env, char *identifier, int value_type, int return_typ
 	return NULL;
 }
 
+value *last_if_evaluation(environment *env) {
+	return search(env, IF_EVAL_SYMBOL, VT_INTEGR, VT_ANY, 0);
+}
+
 /* Retrieve a value of a ANY type from the environment */
 /* Values which are in the nearest scope will be returned */
 value *get(environment *env, char *identifier) {
@@ -123,18 +127,41 @@ void store_function(environment *env, value *func) {
 
 /* Store variable in environment */
 void store(environment *env, int value_type, char *identifier, value *val) {
+	value *new_value;
 	/* Check entry will be valid */
 	if (!identifier || !val || val->value_type==VT_STRING) return;
 	/* Find out what position in the hashtable the value should be stored in */
 	int hash_position = environment_hash(identifier);
-	value *new_value = (value *) calloc(1, sizeof(value));
 	/* The environment must be valid */
 	if (!env) return;
-	/* Build new value */
-	new_value->identifier = malloc((sizeof(char) * strlen(identifier)) + 1);
-	strcpy(new_value->identifier, identifier);
-	new_value->next = NULL;
-	new_value->value_type = value_type;
+	/* Check for redefinition */
+	if (value_type!=VT_FUNCTN && search(env, identifier, value_type, VT_ANY, 1)) {
+		/* Value already exists - overwrite */
+		new_value = search(env, identifier, value_type, VT_ANY, 1);
+	}
+	else if (value_type==VT_FUNCTN && search(env, identifier, value_type, VT_ANY, 1)) {
+		/* Functions may not be redefined if they exist anywhere in the local / global scope */
+		fatal("Function redefinition not allowed!");
+	}
+	else {
+		/* Build new value */
+		new_value = (value *) calloc(1, sizeof(value));
+		new_value->identifier = malloc((sizeof(char) * strlen(identifier)) + 1);
+		strcpy(new_value->identifier, identifier);
+		new_value->next = NULL;
+		new_value->value_type = value_type;
+		/* Do we have any values in this position of the array? */
+		if (!env->values[hash_position]) {
+			/* Nothing exists here yet */
+			env->values[hash_position] = new_value;
+		}
+		else {
+			/* Something exists, let's append another value */
+			value *leaf = find_leaf_value(env->values[hash_position]);
+			leaf->next = new_value;
+		}
+	}
+	/* Assign correct value */
 	switch(value_type) {
 		case VT_INTEGR:
 			new_value->data.int_value = val->data.int_value;
@@ -146,16 +173,6 @@ void store(environment *env, int value_type, char *identifier, value *val) {
 		default:
 			/* No value */
 			break;
-	}
-	/* Do we have any values in this position of the array? */
-	if (!env->values[hash_position]) {
-		/* Nothing exists here yet */
-		env->values[hash_position] = new_value;
-	}
-	else {
-		/* Something exists, let's append another value */
-		value *leaf = find_leaf_value(env->values[hash_position]);
-		leaf->next = new_value;
 	}
 	debug_environment(env);
 }

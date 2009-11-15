@@ -81,6 +81,7 @@ value *evaluate(environment *env, NODE *node, int flag) {
 					rhs = get(env, rhs->data.string_value);
 				else
 					rhs = get(env, rhs->identifier);
+				if (!rhs) fatal("Undeclared identifier");					
 			}
 			assign(env, lhs, rhs);
 			return NULL;
@@ -101,7 +102,54 @@ value *evaluate(environment *env, NODE *node, int flag) {
 		case INT:
 			return int_value(type_of(node));
 		case LEAF:
-			return evaluate(env, node->left, flag);			
+			return evaluate(env, node->left, flag);
+		case IF:
+			new_env = create_environment(env);
+			/* LHS is condition */
+			lhs = evaluate(env, node->left, flag);
+			/* Store temporary value indicating condition outcome */
+			assign(new_env, string_value(IF_EVAL_SYMBOL), lhs);
+			if (to_int(env, lhs)) {
+				/* Condition is true */
+				return evaluate(new_env, node->right, flag);
+			}
+			else {
+				/* We need to look at whether the RHS is ELSE */
+				if (type_of(node->right) == ELSE) {
+					/* we need to traverse into the else */
+					return evaluate(new_env, node->right, flag);					
+				}
+			}
+			return NULL;
+		case ELSE:
+			temp = last_if_evaluation(env);
+			if (!temp) fatal("Could not find evaluation of last IF statement");
+			if (to_int(env, temp)) {
+				return evaluate(env, node->left, flag);					
+			}
+			else {
+				return evaluate(env, node->right, flag);					
+			}
+			break;
+		case CONTINUE:
+			return string_value(CONTINUE_EVAL_SYMBOL);
+		case BREAK:
+			return string_value(BREAK_EVAL_SYMBOL);
+		case WHILE:
+			new_env = create_environment(env);
+			while(to_int(new_env, evaluate(new_env, node->left, flag))) {
+				rhs = evaluate(new_env, node->right, flag);
+				if (rhs!=NULL && rhs->value_type==VT_STRING && strcmp(to_string(rhs), BREAK_EVAL_SYMBOL)==0) {
+					break;
+				}
+				else if (rhs!=NULL && rhs->value_type==VT_STRING && strcmp(to_string(rhs), CONTINUE_EVAL_SYMBOL)==0) {
+					continue;
+				}
+				else if (rhs!=NULL) {
+					return rhs;
+				}
+			}
+			return NULL;
 		case 'D':
 			new_env = create_environment(env);
 			/* LHS is FN definition */
@@ -144,6 +192,7 @@ value *evaluate(environment *env, NODE *node, int flag) {
 					lhs = get(env, lhs->data.string_value);
 				else
 					lhs = get(env, lhs->identifier);
+				if (!lhs) fatal("Undeclared identifier");
 			}
 			return lhs;
 		case '~':
