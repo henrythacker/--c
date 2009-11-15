@@ -24,6 +24,7 @@ environment *initial_environment;
 void start_interpret(NODE *);
 value *string_temporary(char *);
 value *int_temporary(int);
+int param_count(value *);
 char *to_string(value *);
 value *evaluate(environment *, NODE *, int);
 

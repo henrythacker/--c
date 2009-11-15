@@ -23,6 +23,12 @@ int type_of(NODE *node) {
 	return node->type;
 }
 
+/* Join the values together - as a parameter list */
+value *join(value *val1, value *val2) {
+	val1->next = val2;
+	return val1;
+}
+
 /* ==== C TYPE -> VALUE UTILITIES ==== */
 
 /* Make a string value out of a string */
@@ -47,6 +53,15 @@ value *int_value(int val) {
 	tmp_value->value_type = VT_INTEGR;
 	tmp_value->data.int_value = val;
 	t_count++;
+	return tmp_value;
+}
+
+/* Make an int param out of an int and an identifier */
+value *int_param(char *identifier, int val) {
+	value *tmp_value = calloc(1, sizeof(value));
+	tmp_value->identifier = identifier;
+	tmp_value->value_type = VT_INTEGR;
+	tmp_value->data.int_value = val;
 	return tmp_value;
 }
 

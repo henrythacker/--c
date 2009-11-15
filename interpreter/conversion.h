@@ -15,7 +15,9 @@ char *to_string(value *);
 int to_int(environment *, value *);
 TOKEN * cast_from_node(NODE *);
 value *int_value(int);
+value *int_param(char *, int);
 value *string_value(char *);
+value *join(value *, value *);
 int type_of(NODE *);
 
 #endif

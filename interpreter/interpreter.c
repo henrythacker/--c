@@ -12,7 +12,30 @@
 /* Assign data to identifier in env */
 void assign(environment *env, value *identifier, value *data) {
 	if (env==NULL || identifier==NULL) return;
-	store(env, VT_INTEGR, to_string(identifier), data);
+	store(env, data->value_type, to_string(identifier), data);
+}
+
+/* Count number of parameters */
+int param_count(value *val) {
+	int count = 0;
+	if (val == NULL) return 0;
+	if (val->value_type == VT_FUNCTN) {
+		if (val->data.func->params == NULL) return 0;
+		value *current_param = val->data.func->params; 
+		while (current_param) {
+			current_param = current_param->next;
+			count++;
+		}
+	}
+	else {
+		/* We must have a function call with some chain of parameters to count */
+		value *current_param = val; 
+		while (current_param) {
+			current_param = current_param->next;
+			count++;
+		}
+	}
+	return count;
 }
 
 /* Check whether main entry point exists */
@@ -21,7 +44,7 @@ value *main_entry_point(environment *env) {
 }
 
 /* Execute a function */
-value *execute_fn(environment *env, value *fn_reference, int flag) {
+value *execute_fn(environment *env, value *fn_reference, value *params, int flag) {
 	NODE *node;
 	environment *definition_env;
 	if (!fn_reference) {
@@ -29,10 +52,23 @@ value *execute_fn(environment *env, value *fn_reference, int flag) {
 	}
 	else {
 		environment *new_env;
-		node = fn_reference->data.func->node_value;
-		definition_env = fn_reference->data.func->definition_env;
-		new_env = create_environment(definition_env);
-		return evaluate(new_env, node, flag);
+		/* Check parameter count */
+		if (param_count(params) == param_count(fn_reference)) {
+			node = fn_reference->data.func->node_value;		
+			definition_env = fn_reference->data.func->definition_env;
+			new_env = create_environment(definition_env);
+			/* Copy parameters into environment */
+			if (param_count(params) > 0) {
+				// PARAMS WHICH ENV???? *******************####################±!!!!!!!
+				define_parameters(new_env, fn_reference, params);
+			}
+			return evaluate(new_env, node, flag);
+		}
+		else {
+			printf("%d, %d\n", param_count(params), param_count(fn_reference));
+			fatal("Formal and actual parameter count differs");
+			return NULL;
+		}
 	}
 }
 
@@ -53,8 +89,9 @@ value *build_function(environment *env, value *fn_name, value *param_list) {
 
 /* Recursive evaluation of AST */
 value *evaluate(environment *env, NODE *node, int flag) {
-	value *lhs, *rhs, *temp;
+	value *lhs = NULL, *rhs = NULL, *temp = NULL;
 	environment *new_env;
+	char *identifier;
 	/* Check if we were passed an invalid node */
 	if (!node) return NULL;
 	switch(type_of(node)) {
@@ -76,11 +113,13 @@ value *evaluate(environment *env, NODE *node, int flag) {
 		case '=':
 			lhs = evaluate(env, node->left, flag);
 			rhs = evaluate(env, node->right, flag);
-			if (rhs && rhs->value_type!=VT_INTEGR) {
-				if (rhs->value_type == VT_STRING) 
+			if (rhs && rhs->value_type!=VT_INTEGR && rhs->value_type!=VT_FUNCTN) {
+				if (rhs->value_type == VT_STRING) {
 					rhs = get(env, rhs->data.string_value);
-				else
+				}
+				else {
 					rhs = get(env, rhs->identifier);
+				}
 				if (!rhs) fatal("Undeclared identifier");					
 			}
 			assign(env, lhs, rhs);
@@ -92,7 +131,7 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			rhs = evaluate(env, node->right, flag);
 			/* Lookup function */
 			temp = search(env, to_string(lhs), VT_FUNCTN, VT_ANY, 1);
-			return execute_fn(env, temp, flag);		
+			return execute_fn(env, temp, rhs, flag);		
 		case IDENTIFIER:
 			return string_value(cast_from_node(node)->lexeme);
 		case CONSTANT:
@@ -130,7 +169,7 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			else {
 				return evaluate(env, node->right, flag);					
 			}
-			break;
+			return NULL;
 		case CONTINUE:
 			return string_value(CONTINUE_EVAL_SYMBOL);
 		case BREAK:
@@ -158,7 +197,7 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			if (flag==INTERPRET_FULL) {
 				/* RHS becomes evaluated fn body */
 				/* Executed in new environment */
-				rhs = evaluate(new_env, node->right, flag);	
+				//rhs = evaluate(new_env, node->right, INTERPRET_FN_SCAN);					
 			}
 			else {
 				rhs = NULL;
@@ -188,16 +227,27 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			lhs = evaluate(env, node->left, flag);
 			/* Provide lookup for non-constants */
 			if (lhs && lhs->value_type!=VT_INTEGR) {
-				if (lhs->value_type == VT_STRING) 
+				if (lhs->value_type == VT_STRING) {
 					lhs = get(env, lhs->data.string_value);
-				else
+				}
+				else {
 					lhs = get(env, lhs->identifier);
+				}
 				if (!lhs) fatal("Undeclared identifier");
 			}
 			return lhs;
-		case '~':
+		case ',':
 			lhs = evaluate(env, node->left, flag);
 			rhs = evaluate(env, node->right, flag);
+			return join(lhs, rhs);
+		case '~':
+			/* Variable Type */
+			lhs = evaluate(env, node->left, flag);
+			/* Variable Name */
+			rhs = evaluate(env, node->right, flag);
+			if (flag == INTERPRET_PARAMS) {
+				return int_param(to_string(rhs), to_int(env, lhs));
+			}
 			return rhs;
 		case ';':
 			lhs = NULL;
@@ -230,7 +280,7 @@ void start_interpret(NODE *start) {
 		value *return_value;
 		debug("Entry point - int main() found");		
 		debug("Starting full interpretation...");
-		return_value = execute_fn(initial_environment, main_entry_point(initial_environment), INTERPRET_FULL);
+		return_value = execute_fn(initial_environment, main_entry_point(initial_environment), NULL, INTERPRET_FULL);
 		print_return_value(initial_environment, return_value);
 	}
 	else {

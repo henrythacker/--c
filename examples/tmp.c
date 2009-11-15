@@ -1,6 +1,11 @@
-int b = 12;
-int a = b * 2 + 1;
+function plusOne() {
+	int po(int a) {
+		return a + 1;
+	}
+	return po;
+}
 
 int main() {
-	int i = j;
+	function f = plusOne();
+	return f(52 + 3);
 }

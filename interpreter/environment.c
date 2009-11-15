@@ -92,12 +92,30 @@ void debug_print_value(value *val) {
 				/* A string should never be stored in the hashtable - this language doesn't have strings */
 				break;			
 			case VT_FUNCTN:			
-				printf("\tfunc - identifier: %s, entry-point: %p, returns: %s, definition-env: %p\n", val->identifier, val->data.func->node_value, return_type_as_string(val->data.func->return_type), val->data.func->definition_env);			
+				printf("\tfunc - identifier: %s, entry-point: %p, returns: %s, definition-env: %p, params: %d\n", val->identifier, val->data.func->node_value, return_type_as_string(val->data.func->return_type), val->data.func->definition_env, param_count(val));			
 				break;			
 			case VT_LINKED:						
 				break;			
 		}
 		debug_print_value(val->next);
+	}
+}
+
+/* Register actual parameters in environment */
+void define_parameters(environment *env, value *formal, value *actual) {
+	if (param_count(formal) != param_count(actual)) return;
+	value *formal_param = formal->data.func->params;
+	value *actual_param = actual;	
+	while(formal_param && actual_param) {
+		printf("FORMAL - %s\n", formal_param->identifier);
+		if (actual_param->value_type == VT_STRING) {
+			printf("ACTUAL: %s\n", actual_param->data.string_value, env);
+			actual_param = get(env, actual_param->data.string_value);
+		}
+		store(env, actual_param->value_type, formal_param->identifier, actual_param);
+		printf("store finished\n");
+		formal_param = formal_param->next;
+		actual_param = actual_param->next;
 	}
 }
 

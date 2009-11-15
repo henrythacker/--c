@@ -9,5 +9,5 @@ function add(int a) {
 
 int main() {
 	function twicea = twice(add);
-
+	return twicea(5);
 }
