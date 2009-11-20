@@ -21,4 +21,11 @@ typedef struct tac_quad {
 	struct tac_quad *next;		
 }tac_quad;
 
+typedef struct simple {
+	char *label;
+	struct tac_quad *code;
+}simple;
+
+tac_quad *tac_output;
+
 #endif

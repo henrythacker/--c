@@ -124,7 +124,9 @@ void process(NODE *tree, int run_mode)
 	switch(run_mode) 
 	{
 		case(MODE_PARSE):
-			return; /* Nothing more to do */
+			printf("\nparse finished with %p\n", tree);
+	    	print_tree(tree);
+			return;
 		case(MODE_INTERPRET):
 			start_interpret(tree);
 			break;
@@ -168,11 +170,9 @@ int main(int argc, char** argv)
 		if (strcmp(argv[1],"-t")==0) mode=MODE_TAC_GEN;		
 		if (strcmp(argv[1],"-m")==0) mode=MODE_MIPS;		
 		init_symbtable();
-		printf("Running in '%s' mode\n", mode_to_string(mode));
 	    yyparse();
 	    tree = ans;
-	    printf("parse finished with %p\n", tree);
-	    print_tree(tree);
+		printf("\n-------\n");
 		process(tree, mode);
 	}
     return 0;

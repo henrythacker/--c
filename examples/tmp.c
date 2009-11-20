@@ -1,11 +1,2 @@
-function plusOne() {
-	int po(int a) {
-		return a + 1;
-	}
-	return po;
-}
-
-int main() {
-	function f = plusOne();
-	return f(52 + 3);
-}
+int a = 5 - 1 * 3 / 2 / 6;
+int b = a;
