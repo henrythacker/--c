@@ -53,33 +53,57 @@ void print_tac(tac_quad *quad) {
 			printf("%s\n", quad->result);
 			break;
 		case 1:
-			if (quad->op!=' ') {
-				printf("%s %c %s\n", quad->result, quad->op, quad->operand1);
+			if (strlen(quad->op)>0) {
+				printf("%s %s %s\n", quad->result, quad->op, quad->operand1);
 			}
 			else {
 				printf("%s %s\n", quad->result, quad->operand1);
 			}
 			break;
 		case 2:
-			printf("%s = %s %c %s\n", quad->result, quad->operand1, quad->op, quad->operand2);
+			printf("%s = %s %s %s\n", quad->result, quad->operand1, quad->op, quad->operand2);
 			break;	
 	}
 	print_tac(quad->next);
 }
 
 /* Make a TAC quad */
-tac_quad *make_quad_value(char op, char *operand1, char *operand2, char *result) {
+tac_quad *make_quad_value(char *op, char *operand1, char *operand2, char *result) {
 	tac_quad *tmp_quad = (tac_quad *)malloc(sizeof(tac_quad));
-	tmp_quad->op = op;
+	tmp_quad->op = (char *)malloc(sizeof(char) * (strlen(op) + 1));
 	tmp_quad->operand1 = (char *)malloc(sizeof(char) * (strlen(operand1) + 1));
 	tmp_quad->operand2 = (char *)malloc(sizeof(char) * (strlen(operand2) + 1));
 	tmp_quad->result = (char *)malloc(sizeof(char) * (strlen(result) + 1));
+	strcpy(tmp_quad->op, op);
 	strcpy(tmp_quad->operand1, operand1);
 	strcpy(tmp_quad->operand2, operand2);
 	strcpy(tmp_quad->result, result);
 	return tmp_quad;
 }
 
+/* Convert operator tokens into TAC operator string equivalents */
+char *type_to_string(int type) {
+	char *tmp_type;
+	switch(type) {
+		case NE_OP:
+			return "!=";
+		case EQ_OP:
+			return "==";
+		case LE_OP:
+			return "<=";		
+		case GE_OP:
+			return ">=";
+		default:
+			tmp_type = malloc(sizeof(char) * 3);
+			sprintf(tmp_type, "%c", type);
+			return tmp_type;
+	}
+}
+
+/* 
+ * Make the given NODE simple - i.e. return a temporary for complex subtrees 
+ * The appropriate code is also generated and pushed onto the code stack
+*/
 char *make_simple(NODE *node) {
 	int i_value = 0;
 	char *s_tmp, *val1, *val2, *temporary;
@@ -98,7 +122,7 @@ char *make_simple(NODE *node) {
 		case '=':
 			val1 = make_simple(node->left);
 			val2 = make_simple(node->right);
-			append_code(make_quad_value('=', val2, "", val1));
+			append_code(make_quad_value("=", val2, "", val1));
 			return NULL;
 		case '*':
 		case '/':
@@ -107,11 +131,15 @@ char *make_simple(NODE *node) {
 		case '%':							
 		case '-':									
 		case '+':
+		case NE_OP:
+		case LE_OP:
+		case GE_OP:				
+		case EQ_OP:
 			temporary = generate_temporary();
 			val1 = make_simple(node->left);
 			val2 = make_simple(node->right);
-			append_code(make_quad_value(type_of(node), val1, val2, temporary));	
-			return temporary;	
+			append_code(make_quad_value(type_to_string(type_of(node)), val1, val2, temporary));	
+			return temporary;		
 		case '~':
 			make_simple(node->left);
 			make_simple(node->right);			

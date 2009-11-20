@@ -14,7 +14,7 @@ void start_tac_gen(NODE *);
 
 /* TAC structure */
 typedef struct tac_quad {
-	char op;
+	char *op;
 	char *operand1;
 	char *operand2;	
 	char *result;
