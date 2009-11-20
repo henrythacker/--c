@@ -4,6 +4,12 @@
 #include "C.tab.h"
 #include <string.h>
 #include "interpreter.h"
+#include "tacgenerator.h"
+
+#define MODE_PARSE 0
+#define MODE_TAC_GEN 1
+#define MODE_INTERPRET 2
+#define MODE_MIPS 3
 
 char *named(int t)
 {
@@ -95,16 +101,79 @@ extern NODE* yyparse(void);
 extern NODE* ans;
 extern void init_symbtable(void);
 
+char *mode_to_string(int mode) 
+{
+	switch(mode) 
+	{
+		case(MODE_PARSE):
+			return "parse tree";
+		case(MODE_INTERPRET):
+			return "interpret";
+		case(MODE_TAC_GEN):
+			return "three address code generator";						
+		case(MODE_MIPS):
+			return "MIPS code generator";			
+		default:
+			return "Unknown";
+	}
+}
+
+/* Start processing the input per the relevant mode */
+void process(NODE *tree, int run_mode)
+{
+	switch(run_mode) 
+	{
+		case(MODE_PARSE):
+			return; /* Nothing more to do */
+		case(MODE_INTERPRET):
+			start_interpret(tree);
+			break;
+		case(MODE_TAC_GEN):
+			start_tac_gen(tree);
+			break;
+		case(MODE_MIPS):	
+			break;
+		default:
+			return;
+	}	
+}
+
+/* Print out usage instructions */
+void print_runflags() {
+	printf("--C Compiler - Input syntax\n");
+	printf("\n");
+	printf("./mycc [-p|-i|-t|-m] < input_source\n");
+	printf("\n");	
+	printf("-p = parse mode - print out the parse tree and terminate\n");
+	printf("-i = interpret - interpret the parse tree and print the result\n");
+	printf("-t = TAC generator - print out TAC representation of the programme\n");
+	printf("-m = MIPS generator - generate MIPS machine code\n");
+	printf("\n");
+}
+
 int main(int argc, char** argv)
 {
     NODE* tree;
-    if (argc>1 && strcmp(argv[1],"-d")==0) yydebug = 1;
-    init_symbtable();
-    printf("--C COMPILER\n");
-    yyparse();
-    tree = ans;
-    printf("parse finished with %p\n", tree);
-    print_tree(tree);
-	start_interpret(tree);
+	int mode = MODE_PARSE;
+    if (argc==1) 
+	{
+		/* if no flag specified - print out flags */
+		print_runflags();
+	}
+	else
+	{
+		/* Define the allowed parameters */
+		if (strcmp(argv[1],"-p")==0) mode=MODE_PARSE;				
+		if (strcmp(argv[1],"-i")==0) mode=MODE_INTERPRET;		
+		if (strcmp(argv[1],"-t")==0) mode=MODE_TAC_GEN;		
+		if (strcmp(argv[1],"-m")==0) mode=MODE_MIPS;		
+		init_symbtable();
+		printf("Running in '%s' mode\n", mode_to_string(mode));
+	    yyparse();
+	    tree = ans;
+	    printf("parse finished with %p\n", tree);
+	    print_tree(tree);
+		process(tree, mode);
+	}
     return 0;
 }
