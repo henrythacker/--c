@@ -11,6 +11,7 @@
 
 /* Fn prototypes */
 void start_tac_gen(NODE *);
+char *make_simple(NODE *);
 
 /* TAC structure */
 typedef struct tac_quad {

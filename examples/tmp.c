@@ -1,3 +1,10 @@
-int a = 5 - 1 * 3 / 2 / 6;
-int b = a <= 1;
-int c = 5 + 1;
+int main() {
+	int f;
+	if (1 == 2) {
+		int j = 5 + 2;
+	}
+	else {
+		int p = 9 + 1;
+	}
+	f = 12 + 9;
+}

@@ -54,7 +54,13 @@ void print_tac(tac_quad *quad) {
 			break;
 		case 1:
 			if (strlen(quad->op)>0) {
-				printf("%s %s %s\n", quad->result, quad->op, quad->operand1);
+				if (strcmp(quad->op, "?")==0) {
+					/* if statement */
+					printf("if %s goto %s\n", quad->operand1, quad->result);
+				}
+				else {
+					printf("%s %s %s\n", quad->result, quad->op, quad->operand1);
+				}
 			}
 			else {
 				printf("%s %s\n", quad->result, quad->operand1);
@@ -100,6 +106,60 @@ char *type_to_string(int type) {
 	}
 }
 
+/* Build the correct code in the correct place for the else part */
+void build_else_part(NODE *node, int true_part) {
+	if (node==NULL || type_of(node)!=ELSE) return;
+	if (true_part) {
+		make_simple(node->left);
+	}
+	else {
+		make_simple(node->right);		
+	}
+}
+
+void build_if_stmt(NODE *node, int if_count) {
+	char *s_tmp, *val1, *val2, *temporary;
+	if (node==NULL || type_of(node)!=IF) return;
+	/* LHS is condition */
+	val1 = make_simple(node->left);
+	
+	/* Generate if statment */
+	s_tmp = malloc(sizeof(char) * 25);
+	sprintf(s_tmp, "if%dtrue", if_count);
+	append_code(make_quad_value("?", val1, "", s_tmp));
+
+	/* Output false branch (i.e. else part) */	
+	if (type_of(node->right)==ELSE) {
+		/* Build code for false part */
+		build_else_part(node->right, 0);
+	}
+	
+	/* Generate goto end of if statement */
+	s_tmp = malloc(sizeof(char) * 25);
+	sprintf(s_tmp, "if%dend", if_count);
+	append_code(make_quad_value("", s_tmp, "", "goto"));
+	
+	/* Generate label for start of true branch */
+	s_tmp = malloc(sizeof(char) * 25);
+	sprintf(s_tmp, "if%dtrue:", if_count);
+	append_code(make_quad_value("", "", "", s_tmp));
+	
+	/* Output true branch */
+	if (type_of(node->right)==ELSE) {
+		/* Build code for true part */
+		build_else_part(node->right, 1);
+	}
+	else {
+		/* True part is whole right branch */
+		make_simple(node->right);
+	}
+	
+	/* Generate end of IF stmt label */
+	s_tmp = malloc(sizeof(char) * 25);
+	sprintf(s_tmp, "if%dend:", if_count);
+	append_code(make_quad_value("", "", "", s_tmp));
+}
+
 /* 
  * Make the given NODE simple - i.e. return a temporary for complex subtrees 
  * The appropriate code is also generated and pushed onto the code stack
@@ -107,6 +167,7 @@ char *type_to_string(int type) {
 char *make_simple(NODE *node) {
 	int i_value = 0;
 	char *s_tmp, *val1, *val2, *temporary;
+	static int if_count = 0;
 	if (node==NULL) return NULL;
 	switch(type_of(node)) {
 		case LEAF: 
@@ -119,6 +180,9 @@ char *make_simple(NODE *node) {
 			return s_tmp;
 		case IDENTIFIER:
 			return cast_from_node(node)->lexeme;
+		case IF:
+			build_if_stmt(node, ++if_count);
+			return NULL;
 		case '=':
 			val1 = make_simple(node->left);
 			val2 = make_simple(node->right);
@@ -138,14 +202,18 @@ char *make_simple(NODE *node) {
 			temporary = generate_temporary();
 			val1 = make_simple(node->left);
 			val2 = make_simple(node->right);
-			append_code(make_quad_value(type_to_string(type_of(node)), val1, val2, temporary));	
-			return temporary;		
+			append_code(make_quad_value(type_to_string(type_of(node)), val1, val2, temporary));
+			return temporary;
 		case '~':
 			make_simple(node->left);
 			make_simple(node->right);			
 			return NULL;
 		case INT:
 		case VOID:
+			return NULL;
+		default:
+			make_simple(node->left);
+			make_simple(node->right);			
 			return NULL;
 	}
 	
