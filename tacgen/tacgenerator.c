@@ -117,13 +117,14 @@ void build_else_part(NODE *node, int true_part) {
 	}
 }
 
-void build_if_stmt(NODE *node, int if_count) {
+/* Build necessary code for an if statement */
+void build_if_stmt(NODE *node, int if_count, tac_quad *end_jump) {
 	char *s_tmp, *val1, *val2, *temporary;
-	if (node==NULL || type_of(node)!=IF) return;
+	if (node==NULL || (type_of(node)!=IF && type_of(node)!=WHILE)) return;
 	/* LHS is condition */
 	val1 = make_simple(node->left);
 	
-	/* Generate if statment */
+	/* Generate if statement */
 	s_tmp = malloc(sizeof(char) * 25);
 	sprintf(s_tmp, "if%dtrue", if_count);
 	append_code(make_quad_value("?", val1, "", s_tmp));
@@ -154,10 +155,41 @@ void build_if_stmt(NODE *node, int if_count) {
 		make_simple(node->right);
 	}
 	
+	/* Check if extra loop jump has been specified (for WHILE loops etc) */
+	if (end_jump) {
+		append_code(end_jump);
+	}
+	
 	/* Generate end of IF stmt label */
 	s_tmp = malloc(sizeof(char) * 25);
 	sprintf(s_tmp, "if%dend:", if_count);
 	append_code(make_quad_value("", "", "", s_tmp));
+}
+
+/* Build necessary code for a while statement */
+void build_while_stmt(NODE *node, int while_count, int if_count) {
+	char *s_tmp, *val1, *val2, *temporary;
+	tac_quad *loop_jmp;
+	if (node==NULL || type_of(node)!=WHILE) return;
+	
+	/* Generate label for start of while loop */
+	s_tmp = malloc(sizeof(char) * 25);
+	sprintf(s_tmp, "while%d:", while_count);
+	append_code(make_quad_value("", "", "", s_tmp));
+	
+	/* Generate loop jump */
+	s_tmp = malloc(sizeof(char) * 25);
+	sprintf(s_tmp, "while%d", while_count);
+	loop_jmp = make_quad_value("", s_tmp, "", "goto");
+	
+	/* Build IF stmt for condition */
+	build_if_stmt(node, if_count, loop_jmp);
+	
+	/* End while loop stmt */
+	s_tmp = malloc(sizeof(char) * 25);
+	sprintf(s_tmp, "while%dend:", while_count);
+	append_code(make_quad_value("", "", "", s_tmp));
+	
 }
 
 /* 
@@ -168,6 +200,7 @@ char *make_simple(NODE *node) {
 	int i_value = 0;
 	char *s_tmp, *val1, *val2, *temporary;
 	static int if_count = 0;
+	static int while_count = 0;	
 	if (node==NULL) return NULL;
 	switch(type_of(node)) {
 		case LEAF: 
@@ -181,8 +214,21 @@ char *make_simple(NODE *node) {
 		case IDENTIFIER:
 			return cast_from_node(node)->lexeme;
 		case IF:
-			build_if_stmt(node, ++if_count);
+			build_if_stmt(node, ++if_count, NULL);
 			return NULL;
+		case BREAK:
+			s_tmp = malloc(sizeof(char) * 25);
+			sprintf(s_tmp, "while%dend", while_count);
+			append_code(make_quad_value("", s_tmp, "", "goto"));
+			return NULL;			
+		case CONTINUE:
+			s_tmp = malloc(sizeof(char) * 25);
+			sprintf(s_tmp, "while%d", while_count);
+			append_code(make_quad_value("", s_tmp, "", "goto"));
+			return NULL;
+		case WHILE:
+			build_while_stmt(node, ++while_count, ++if_count);
+			return NULL;	
 		case '=':
 			val1 = make_simple(node->left);
 			val2 = make_simple(node->right);

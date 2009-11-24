@@ -1,10 +1,7 @@
 int main() {
-	int f;
-	if (1 == 2) {
-		int j = 5 + 2;
+	int f = 23;
+	while (f>2) {
+		if (f==20) break;
+		f = f - 1;
 	}
-	else {
-		int p = 9 + 1;
-	}
-	f = 12 + 9;
 }
