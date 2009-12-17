@@ -8,8 +8,6 @@
 *
 */
 
-int t_count = 1;
-
 /* NODE -> TOKEN CAST */
 TOKEN * cast_from_node(NODE *node) {
 	return (node==NULL ? NULL : (TOKEN *)node);
@@ -33,9 +31,10 @@ value *join(value *val1, value *val2) {
 
 /* Make a string value out of a string */
 value *string_value(char *val) {
+	static int t_count = 0;
 	value *tmp_value = calloc(1, sizeof(value));
 	char temporary_name[10];
-	sprintf(temporary_name, "t%d", t_count);
+	sprintf(temporary_name, "str%d", t_count);
 	tmp_value->identifier = temporary_name;
 	tmp_value->value_type = VT_STRING;
 	tmp_value->data.string_value = (char *) malloc((sizeof(char) * strlen(val)) + 1);
@@ -46,9 +45,10 @@ value *string_value(char *val) {
 
 /* Make an int value out of an int */
 value *int_value(int val) {
+	static int t_count = 0;
 	value *tmp_value = calloc(1, sizeof(value));
 	char temporary_name[10];
-	sprintf(temporary_name, "t%d", t_count);
+	sprintf(temporary_name, "int%d", t_count);
 	tmp_value->identifier = temporary_name;
 	tmp_value->value_type = VT_INTEGR;
 	tmp_value->data.int_value = val;
