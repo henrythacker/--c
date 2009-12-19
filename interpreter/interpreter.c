@@ -10,9 +10,9 @@
 
 /* Assign variable */
 /* Assign data to identifier in env */
-void assign(environment *env, value *identifier, value *data) {
+void assign(environment *env, value *identifier, value *data, int is_declarator) {
 	if (env==NULL || identifier==NULL) return;
-	store(env, data->value_type, to_string(identifier), data, 0);
+	store(env, data->value_type, to_string(identifier), data, 0, is_declarator, 0);
 }
 
 /* Count number of parameters */
@@ -48,7 +48,7 @@ value *execute_fn(environment *env, value *fn_reference, value *params, int flag
 	NODE *node;
 	environment *definition_env;
 	if (!fn_reference) {
-		fatal("Could not find function!");
+		fatal("Function is undefined");	
 	}
 	else {
 		environment *new_env;
@@ -57,6 +57,9 @@ value *execute_fn(environment *env, value *fn_reference, value *params, int flag
 			node = fn_reference->data.func->node_value;		
 			definition_env = fn_reference->data.func->definition_env;
 			new_env = create_environment(definition_env);
+			if (!node) {
+				fatal("Function '%s' is undefined", fn_reference->identifier);	
+			}
 			/* Copy parameters into environment */
 			if (param_count(params) > 0) {
 				define_parameters(new_env, fn_reference, params, env);
@@ -83,6 +86,81 @@ value *build_function(environment *env, value *fn_name, value *param_list) {
 	fn_value->definition_env = env;
 	tmp_value->data.func = fn_value;
 	return tmp_value;
+}
+
+/* Return NULL function for pointing at uninitialized function ptrs */
+value *build_null_function() {
+	return build_function(NULL, string_value("$NULL_FN"), NULL);
+}
+
+/* Declare variables underneath a declarator tree */
+void declare_variables(environment *env, NODE *node, int variable_type) {
+	value *variable_name = NULL;
+	value *variable_value = NULL;
+	if (env == NULL || node == NULL) {
+		return;
+	}
+	else if (type_of(node) == ',') {
+		declare_variables(env, node->left, variable_type);
+		declare_variables(env, node->right, variable_type);
+		return;		
+	}
+	else if (type_of(node) == '=') { /* Specific assignment */
+		variable_name = evaluate(env, node->left, 0);
+		variable_value = evaluate(env, node->right, 0);
+	}
+	else if (type_of(node) == LEAF) { /* Undefined assignment */
+		variable_name = evaluate(env, node->left, 0);		
+	}
+	/* Assign variable */
+	if (variable_name) {
+		if (variable_value) {
+			/* If variable_value is a string, we need to do a fn/variable lookup */
+			if (variable_value->value_type == VT_STRING) {
+				value *old_name = variable_value;
+				variable_value = get(env, to_string(variable_value));
+				if (!variable_value) {
+					fatal("Could not find identifier '%s'", to_string(old_name));
+				}
+			}
+			/* We have to assign the specified initial value, AFTER typechecking */
+			type_check_assignment(variable_name, variable_value, variable_type);
+			assign(env, variable_name, variable_value, 1);
+		}
+		else {
+			/* Assign a default initialization value for this type */
+			switch(variable_type) {	
+				case INT:
+					assign(env, variable_name, int_value(0), 1);
+					break;
+				case VOID:	
+					assign(env, variable_name, void_value(), 1);
+					break;
+				case FUNCTION:
+					assign(env, variable_name, null_function, 1);
+					break;
+			}
+		}
+	}
+	else {
+		fatal("Could not ascertain variable name!");
+	}
+}
+
+/* Go down the declarator tree initialising the variables, at this stage */
+void register_variable_subtree(environment *env, NODE *node) {
+	NODE *original_node = node;
+	/* Ensure we have all required params */
+	if (!env || !node || type_of(node) != '~') return;
+	/* Skip over LEAF nodes */
+	if (node->left != NULL && type_of(node->left) == LEAF) {
+		node = node->left;
+	}
+	if (node->left != NULL && (type_of(node->left) == VOID || type_of(node->left) == FUNCTION || type_of(node->left) == INT)) {
+		/* Find variable type */
+		int variable_type = to_int(NULL, evaluate(env, node->left, 0));
+		declare_variables(env, original_node->right, variable_type);
+	}
 }
 
 /* Recursive evaluation of AST */
@@ -120,7 +198,7 @@ value *evaluate(environment *env, NODE *node, int flag) {
 				}
 				if (!rhs) fatal("Undeclared identifier");					
 			}
-			assign(env, lhs, rhs);
+			assign(env, lhs, rhs, 0);
 			return NULL;
 		case APPLY:
 			/* FN Name */
@@ -145,7 +223,7 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			/* LHS is condition */
 			lhs = evaluate(env, node->left, flag);
 			/* Store temporary value indicating condition outcome */
-			assign(new_env, string_value(IF_EVAL_SYMBOL), lhs);
+			assign(new_env, string_value(IF_EVAL_SYMBOL), lhs, 1);
 			if (to_int(env, lhs)) {
 				/* Condition is true */
 				return evaluate(new_env, node->right, flag);
@@ -233,6 +311,8 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			}
 			return NULL;
 		case '~':
+			/* First sweep - initialise variables with correct type - typechecking done here */
+			register_variable_subtree(env, node);
 			/* Variable Type */
 			lhs = evaluate(env, node->left, flag);
 			/* Variable Name */
@@ -265,6 +345,8 @@ value *evaluate(environment *env, NODE *node, int flag) {
 
 /* Start the interpretation process at the top of the AST */
 void start_interpret(NODE *start) {
+	/* Store a reference to the NULL function */
+	null_function = build_null_function();
 	initial_environment = create_environment(NULL);
 	evaluate(initial_environment, start, INTERPRET_FN_SCAN);
 	debug("Function scan complete.");

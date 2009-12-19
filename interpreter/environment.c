@@ -85,6 +85,9 @@ char *return_type_as_string(int type) {
 void debug_print_value(value *val) {
 	if (DEBUG_ON && val) {
 		switch(val->value_type) {
+			case VT_VOID:
+				printf("\tvoid - identifier: %s\n", val->identifier);
+				break;
 			case VT_INTEGR:
 				printf("\tint - identifier: %s, value: %d\n", val->identifier, val->data.int_value);
 				break;
@@ -112,10 +115,10 @@ void define_parameters(environment *env, value *formal, value *actual, environme
 		if (actual_param->value_type == VT_STRING) {
 			tmp = get(search_env, actual_param->data.string_value);
 			if (!tmp) fatal("Could not look-up parameter value");
-			store(env, tmp->value_type, formal_param->identifier, tmp, 1);
+			store(env, tmp->value_type, formal_param->identifier, tmp, 1, 1, 0);
 		}
 		else {
-			store(env, actual_param->value_type, formal_param->identifier, actual_param, 1);
+			store(env, actual_param->value_type, formal_param->identifier, actual_param, 1, 1, 0);
 		}
 		formal_param = formal_param->next;
 		actual_param = actual_param->next;
@@ -143,11 +146,11 @@ void store_function(environment *env, value *func) {
 	/* Check we were passed valid data */
 	if (!env || !func) return;
 	if (func->value_type!=VT_FUNCTN) return;
-	store(env, VT_FUNCTN, func->identifier, func, 0);
+	store(env, VT_FUNCTN, func->identifier, func, 0, 1, 1);
 }
 
 /* Store variable in environment */
-value *store(environment *env, int value_type, char *identifier, value *val, int is_param) {
+value *store(environment *env, int value_type, char *identifier, value *val, int is_param, int is_declarator, int is_fn_dec) {
 	value *new_value;
 	/* Check entry will be valid */
 	if (!identifier || !val || val->value_type==VT_STRING) return NULL;
@@ -156,16 +159,23 @@ value *store(environment *env, int value_type, char *identifier, value *val, int
 	/* The environment must be valid */
 	if (!env) return NULL;
 	/* Check for redefinition */
-	if (value_type!=VT_FUNCTN && search(env, identifier, value_type, VT_ANY, 1) && !is_param) {
+	if (!is_fn_dec && !is_declarator && value_type!=VT_FUNCTN && !is_param) {
 		/* Value already exists - overwrite */
 		new_value = search(env, identifier, value_type, VT_ANY, 1);
+		if (!new_value) {
+			fatal("Could not find identifier '%s'", identifier);
+		}
 	}
-	else if (value_type==VT_FUNCTN && search(env, identifier, value_type, VT_ANY, 1) && !is_param) {
+	else if (is_fn_dec && value_type==VT_FUNCTN && search(env, identifier, value_type, VT_ANY, 1) && !is_param) {
 		/* Functions may not be redefined if they exist anywhere in the local / global scope */
-		fatal("Function redefinition not allowed!");
+		fatal("Function '%s' redefines another function. Function redefinition is not allowed!", identifier);
 		return NULL;
 	}
 	else {
+		/* If is a declarator, we must NOT redefine an existing variable in the SAME local scope */
+		if (is_declarator && search(env, identifier, VT_ANY, VT_ANY, 0)) {
+			fatal("Variable '%s' redeclares an existing variable in local scope", identifier);
+		}
 		/* Build new value */
 		new_value = (value *) calloc(1, sizeof(value));
 		new_value->identifier = malloc((sizeof(char) * strlen(identifier)) + 1);
@@ -176,11 +186,6 @@ value *store(environment *env, int value_type, char *identifier, value *val, int
 		if (!env->values[hash_position]) {
 			/* Nothing exists here yet */
 			env->values[hash_position] = new_value;
-		}
-		else {
-			/* Something exists, let's append another value */
-			value *leaf = find_leaf_value(env->values[hash_position]);
-			leaf->next = new_value;
 		}
 	}
 	/* Assign correct value */

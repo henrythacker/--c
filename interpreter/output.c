@@ -9,8 +9,48 @@
 */
 
 /* Fatal error */
-void fatal(char *str) {
-	printf("FATAL: %s\n", str);
+void fatal(char *str, ...) {
+	va_list arglist;
+	char *str_arg;
+	char *current_char;
+	int i;
+	va_start(arglist, str);
+	printf("Fatal exception: ");
+	/* Iterate through our format string */
+	for (current_char = str; *current_char!='\0'; current_char++) {
+		/* Check if a format specifier is coming up? */
+		if (*current_char != '%') {
+			printf("%c", *current_char);
+			/* Move to the next char */
+			continue;
+		}
+		current_char++;
+		switch(*current_char) {
+			/* What type of format specifier do we have? */
+			case 'c':
+				/* Pull out char as int */
+				i = va_arg(arglist, int);
+				printf("%c", i);
+				break;
+			case 'd':
+				/* Pull out an int */
+				i = va_arg(arglist, int);
+				printf("%d", i);
+				break;
+			case 's':
+				/* Pull out a string */
+				str_arg = va_arg(arglist, char *);
+				printf("%s", str_arg);
+				break;
+			case '%':
+				/* Allow percentage sign to be escaped */
+				printf("%%");
+				break;
+		}
+		va_end(arglist);
+	}
+	printf("\n");
+	/* Fatal error, so exit with error code */
 	exit(-1);
 }
 

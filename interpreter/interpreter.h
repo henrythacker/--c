@@ -11,6 +11,7 @@
 #include "output.h"
 #include "conversion.h"
 #include "environment.h"
+#include "utilities.h"
 
 /* Interpretation flags */
 #define INTERPRET_FULL INT_MIN + 1
@@ -19,6 +20,7 @@
 
 /* Vars */
 environment *initial_environment;
+value *null_function;
 
 /* Fn prototypes */
 void start_interpret(NODE *);

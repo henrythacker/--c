@@ -2,6 +2,6 @@
 
 void register_temporary(environment *env, char *temp_name) {
 	value *reference = NULL;
-	reference = store(env, VT_INTEGR, temp_name, int_value(0), 0);
+	reference = store(env, VT_INTEGR, temp_name, int_value(0), 0, 1, 0);
 	assert(reference!=NULL, "Could not register temporary");
 }
