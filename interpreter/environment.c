@@ -173,7 +173,7 @@ value *store(environment *env, int value_type, char *identifier, value *val, int
 	}
 	else {
 		/* If is a declarator, we must NOT redefine an existing variable in the SAME local scope */
-		if (is_declarator && search(env, identifier, VT_ANY, VT_ANY, 0)) {
+		if (!is_param && is_declarator && search(env, identifier, VT_ANY, VT_ANY, 0)) {
 			fatal("Variable '%s' redeclares an existing variable in local scope", identifier);
 		}
 		/* Build new value */

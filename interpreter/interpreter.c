@@ -311,8 +311,11 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			}
 			return NULL;
 		case '~':
-			/* First sweep - initialise variables with correct type - typechecking done here */
-			register_variable_subtree(env, node);
+			/* Do not pre-register formal parameters */
+			if (flag != INTERPRET_PARAMS) {
+				/* First sweep - initialise variables with correct type - assignment typechecking done here */
+				register_variable_subtree(env, node);
+			}
 			/* Variable Type */
 			lhs = evaluate(env, node->left, flag);
 			/* Variable Name */
