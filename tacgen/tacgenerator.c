@@ -1,20 +1,13 @@
 #include "tacgenerator.h"
 
 /* Generate a new temporary */
-char *generate_temporary() {
+char *generate_temporary(environment *env) {
 	char *tmp;
 	static int temp_count = 0;
 	tmp = malloc(sizeof(char) * 15);
 	sprintf(tmp, "t%d", ++temp_count);
+	register_temporary(env, tmp);
 	return tmp;
-}
-
-/* Assertion with error text */
-void assert(int assertion, char *error) {
-	if (!assertion) {
-		printf("TAC Error: %s\n", error);
-		exit(-1);
-	}
 }
 
 /* Add TAC quad onto end of generated code */
@@ -107,22 +100,22 @@ char *type_to_string(int type) {
 }
 
 /* Build the correct code in the correct place for the else part */
-void build_else_part(NODE *node, int true_part) {
+void build_else_part(environment *env, NODE *node, int true_part) {
 	if (node==NULL || type_of(node)!=ELSE) return;
 	if (true_part) {
-		make_simple(node->left);
+		make_simple(env, node->left);
 	}
 	else {
-		make_simple(node->right);		
+		make_simple(env, node->right);		
 	}
 }
 
 /* Build necessary code for an if statement */
-void build_if_stmt(NODE *node, int if_count, tac_quad *end_jump) {
+void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *end_jump) {
 	char *s_tmp, *val1, *val2, *temporary;
 	if (node==NULL || (type_of(node)!=IF && type_of(node)!=WHILE)) return;
 	/* LHS is condition */
-	val1 = make_simple(node->left);
+	val1 = make_simple(env, node->left);
 	
 	/* Generate if statement */
 	s_tmp = malloc(sizeof(char) * 25);
@@ -132,7 +125,7 @@ void build_if_stmt(NODE *node, int if_count, tac_quad *end_jump) {
 	/* Output false branch (i.e. else part) */	
 	if (type_of(node->right)==ELSE) {
 		/* Build code for false part */
-		build_else_part(node->right, 0);
+		build_else_part(env, node->right, 0);
 	}
 	
 	/* Generate goto end of if statement */
@@ -148,11 +141,11 @@ void build_if_stmt(NODE *node, int if_count, tac_quad *end_jump) {
 	/* Output true branch */
 	if (type_of(node->right)==ELSE) {
 		/* Build code for true part */
-		build_else_part(node->right, 1);
+		build_else_part(env, node->right, 1);
 	}
 	else {
 		/* True part is whole right branch */
-		make_simple(node->right);
+		make_simple(env, node->right);
 	}
 	
 	/* Check if extra loop jump has been specified (for WHILE loops etc) */
@@ -167,7 +160,7 @@ void build_if_stmt(NODE *node, int if_count, tac_quad *end_jump) {
 }
 
 /* Build necessary code for a while statement */
-void build_while_stmt(NODE *node, int while_count, int if_count) {
+void build_while_stmt(environment *env, NODE *node, int while_count, int if_count) {
 	char *s_tmp, *val1, *val2, *temporary;
 	tac_quad *loop_jmp;
 	if (node==NULL || type_of(node)!=WHILE) return;
@@ -183,7 +176,7 @@ void build_while_stmt(NODE *node, int while_count, int if_count) {
 	loop_jmp = make_quad_value("", s_tmp, "", "goto");
 	
 	/* Build IF stmt for condition */
-	build_if_stmt(node, if_count, loop_jmp);
+	build_if_stmt(env, node, if_count, loop_jmp);
 	
 	/* End while loop stmt */
 	s_tmp = malloc(sizeof(char) * 25);
@@ -196,7 +189,7 @@ void build_while_stmt(NODE *node, int while_count, int if_count) {
  * Make the given NODE simple - i.e. return a temporary for complex subtrees 
  * The appropriate code is also generated and pushed onto the code stack
 */
-char *make_simple(NODE *node) {
+char *make_simple(environment *env, NODE *node) {
 	int i_value = 0;
 	char *s_tmp, *val1, *val2, *temporary;
 	static int if_count = 0;
@@ -204,7 +197,7 @@ char *make_simple(NODE *node) {
 	if (node==NULL) return NULL;
 	switch(type_of(node)) {
 		case LEAF: 
-			return make_simple(node->left);
+			return make_simple(env, node->left);
 		case CONSTANT:
 			/* Convert int to string */
 			s_tmp = malloc(sizeof(char) * 15);
@@ -214,7 +207,7 @@ char *make_simple(NODE *node) {
 		case IDENTIFIER:
 			return cast_from_node(node)->lexeme;
 		case IF:
-			build_if_stmt(node, ++if_count, NULL);
+			build_if_stmt(env, node, ++if_count, NULL);
 			return NULL;
 		case BREAK:
 			s_tmp = malloc(sizeof(char) * 25);
@@ -227,11 +220,11 @@ char *make_simple(NODE *node) {
 			append_code(make_quad_value("", s_tmp, "", "goto"));
 			return NULL;
 		case WHILE:
-			build_while_stmt(node, ++while_count, ++if_count);
+			build_while_stmt(env, node, ++while_count, ++if_count);
 			return NULL;	
 		case '=':
-			val1 = make_simple(node->left);
-			val2 = make_simple(node->right);
+			val1 = make_simple(env, node->left);
+			val2 = make_simple(env, node->right);
 			append_code(make_quad_value("=", val2, "", val1));
 			return NULL;
 		case '*':
@@ -245,21 +238,21 @@ char *make_simple(NODE *node) {
 		case LE_OP:
 		case GE_OP:				
 		case EQ_OP:
-			temporary = generate_temporary();
-			val1 = make_simple(node->left);
-			val2 = make_simple(node->right);
+			temporary = generate_temporary(env);
+			val1 = make_simple(env, node->left);
+			val2 = make_simple(env, node->right);
 			append_code(make_quad_value(type_to_string(type_of(node)), val1, val2, temporary));
 			return temporary;
 		case '~':
-			make_simple(node->left);
-			make_simple(node->right);			
+			make_simple(env, node->left);
+			make_simple(env, node->right);			
 			return NULL;
 		case INT:
 		case VOID:
 			return NULL;
 		default:
-			make_simple(node->left);
-			make_simple(node->right);			
+			make_simple(env, node->left);
+			make_simple(env, node->right);			
 			return NULL;
 	}
 	
@@ -268,6 +261,7 @@ char *make_simple(NODE *node) {
 
 /* Start the TAC generator process at the top of the AST */
 void start_tac_gen(NODE *tree) {
-	make_simple(tree);
+	environment *default_env = create_environment(NULL);
+	make_simple(default_env, tree);
 	print_tac(tac_output);
 }

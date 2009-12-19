@@ -65,7 +65,7 @@ value *find_leaf_value(value *);
 value *get(environment *, char *);
 value *last_if_evaluation(environment *);
 void define_parameters(environment *, value *, value *, environment *);
-void store(environment *, int, char *, value *, int);
+value *store(environment *, int, char *, value *, int);
 value *search(environment *, char *, int, int, int);
 void store_function(environment *, value *);
 int environment_hash(char *);

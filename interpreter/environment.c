@@ -147,14 +147,14 @@ void store_function(environment *env, value *func) {
 }
 
 /* Store variable in environment */
-void store(environment *env, int value_type, char *identifier, value *val, int is_param) {
+value *store(environment *env, int value_type, char *identifier, value *val, int is_param) {
 	value *new_value;
 	/* Check entry will be valid */
-	if (!identifier || !val || val->value_type==VT_STRING) return;
+	if (!identifier || !val || val->value_type==VT_STRING) return NULL;
 	/* Find out what position in the hashtable the value should be stored in */
 	int hash_position = environment_hash(identifier);
 	/* The environment must be valid */
-	if (!env) return;
+	if (!env) return NULL;
 	/* Check for redefinition */
 	if (value_type!=VT_FUNCTN && search(env, identifier, value_type, VT_ANY, 1) && !is_param) {
 		/* Value already exists - overwrite */
@@ -163,6 +163,7 @@ void store(environment *env, int value_type, char *identifier, value *val, int i
 	else if (value_type==VT_FUNCTN && search(env, identifier, value_type, VT_ANY, 1) && !is_param) {
 		/* Functions may not be redefined if they exist anywhere in the local / global scope */
 		fatal("Function redefinition not allowed!");
+		return NULL;
 	}
 	else {
 		/* Build new value */
@@ -196,6 +197,7 @@ void store(environment *env, int value_type, char *identifier, value *val, int i
 			break;
 	}
 	debug_environment(env);
+	return new_value;
 }
 
 /* ==== HASHTABLE UTILITIES ==== */
