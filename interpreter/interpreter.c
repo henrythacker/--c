@@ -134,7 +134,7 @@ void declare_variables(environment *env, NODE *node, int variable_type) {
 					assign(env, variable_name, int_value(0), 1);
 					break;
 				case VOID:	
-					assign(env, variable_name, void_value(), 1);
+					assign(env, variable_name, void_value(), 1);						
 					break;
 				case FUNCTION:
 					assign(env, variable_name, null_function, 1);
@@ -198,6 +198,11 @@ value *evaluate(environment *env, NODE *node, int flag) {
 				}
 				if (!rhs) fatal("Undeclared identifier");					
 			}
+			/* Check the LHS variable has already been defined */
+			temp = get(env, to_string(lhs));
+			assert(temp!=NULL, "Variable not defined");
+			/* Type check the assignment */
+			type_check_assignment(lhs, rhs, vt_type_convert(temp->value_type));
 			assign(env, lhs, rhs, 0);
 			return NULL;
 		case APPLY:
@@ -323,7 +328,8 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			if (flag == INTERPRET_PARAMS) {
 				return int_param(to_string(rhs), to_int(env, lhs));
 			}
-			return rhs;
+			return NULL;
+			/* return rhs; */
 		case ';':
 			lhs = NULL;
 			rhs = NULL;

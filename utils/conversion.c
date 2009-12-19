@@ -27,6 +27,22 @@ value *join(value *val1, value *val2) {
 	return val1;
 }
 
+
+/* Convert from the VT types used in the environment into the parser generated token types */
+int vt_type_convert(int type) {
+	switch(type) {
+		case VT_INTEGR:
+			return INT;
+		case VT_FUNCTN:
+			return FUNCTION;
+		case VT_VOID:
+			return VOID;
+		default:
+			return -1;
+	}
+}
+
+
 /* ==== C TYPE -> VALUE UTILITIES ==== */
 
 /* Make a string value out of a string */

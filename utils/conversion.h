@@ -19,5 +19,6 @@ value *int_param(char *, int);
 value *string_value(char *);
 value *join(value *, value *);
 int type_of(NODE *);
+int vt_type_convert(int);
 
 #endif
