@@ -112,12 +112,15 @@ void define_parameters(environment *env, value *formal, value *actual, environme
 	value *tmp;
 	int dealtWith = 0;
 	while(formal_param && actual_param) {
+		/* Type check assignment */
 		if (actual_param->value_type == VT_STRING) {
 			tmp = get(search_env, actual_param->data.string_value);
 			if (!tmp) fatal("Could not look-up parameter value");
+			type_check_assignment(string_value(formal_param->identifier), tmp, to_int(NULL, formal_param));
 			store(env, tmp->value_type, formal_param->identifier, tmp, 1, 1, 0);
 		}
 		else {
+			type_check_assignment(string_value(formal_param->identifier), actual_param, to_int(NULL, formal_param));
 			store(env, actual_param->value_type, formal_param->identifier, actual_param, 1, 1, 0);
 		}
 		formal_param = formal_param->next;
