@@ -40,7 +40,14 @@ int param_count(value *val) {
 
 /* Check whether main entry point exists */
 value *main_entry_point(environment *env) {
-	return search(env, "main", VT_FUNCTN, INT, 0);
+	value *main_fn = search(env, "main", VT_FUNCTN, INT, 0);
+	if (!main_fn) return NULL;
+	/* There must be no parameters to the main fn */
+	if (!main_fn->data.func->params) {
+		return main_fn;
+	}
+	fatal("Entry point - int main() must have no parameters");
+	return NULL;
 }
 
 /* Execute a function */
