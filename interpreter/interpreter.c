@@ -71,7 +71,7 @@ value *execute_fn(environment *env, value *fn_reference, value *params, int flag
 			if (param_count(params) > 0) {
 				define_parameters(new_env, fn_reference, params, env);
 			}
-			return evaluate(new_env, node, flag);
+			return evaluate(new_env, node, flag, fn_reference->data.func->return_type);
 		}
 		else {
 			fatal("Formal and actual parameter count differs");
@@ -101,23 +101,23 @@ value *build_null_function() {
 }
 
 /* Declare variables underneath a declarator tree */
-void declare_variables(environment *env, NODE *node, int variable_type) {
+void declare_variables(environment *env, NODE *node, int variable_type, int return_type) {
 	value *variable_name = NULL;
 	value *variable_value = NULL;
 	if (env == NULL || node == NULL) {
 		return;
 	}
 	else if (type_of(node) == ',') {
-		declare_variables(env, node->left, variable_type);
-		declare_variables(env, node->right, variable_type);
+		declare_variables(env, node->left, variable_type, return_type);
+		declare_variables(env, node->right, variable_type, return_type);
 		return;		
 	}
 	else if (type_of(node) == '=') { /* Specific assignment */
-		variable_name = evaluate(env, node->left, 0);
-		variable_value = evaluate(env, node->right, 0);
+		variable_name = evaluate(env, node->left, 0, return_type);
+		variable_value = evaluate(env, node->right, 0, return_type);
 	}
 	else if (type_of(node) == LEAF) { /* Undefined assignment */
-		variable_name = evaluate(env, node->left, 0);		
+		variable_name = evaluate(env, node->left, 0, return_type);		
 	}
 	/* Assign variable */
 	if (variable_name) {
@@ -155,7 +155,7 @@ void declare_variables(environment *env, NODE *node, int variable_type) {
 }
 
 /* Go down the declarator tree initialising the variables, at this stage */
-void register_variable_subtree(environment *env, NODE *node) {
+void register_variable_subtree(environment *env, NODE *node, int return_type) {
 	NODE *original_node = node;
 	/* Ensure we have all required params */
 	if (!env || !node || type_of(node) != '~') return;
@@ -165,13 +165,13 @@ void register_variable_subtree(environment *env, NODE *node) {
 	}
 	if (node->left != NULL && (type_of(node->left) == VOID || type_of(node->left) == FUNCTION || type_of(node->left) == INT)) {
 		/* Find variable type */
-		int variable_type = to_int(NULL, evaluate(env, node->left, 0));
-		declare_variables(env, original_node->right, variable_type);
+		int variable_type = to_int(NULL, evaluate(env, node->left, 0, return_type));
+		declare_variables(env, original_node->right, variable_type, return_type);
 	}
 }
 
 /* Recursive evaluation of AST */
-value *evaluate(environment *env, NODE *node, int flag) {
+value *evaluate(environment *env, NODE *node, int flag, int return_type) {
 	value *lhs = NULL, *rhs = NULL, *temp = NULL;
 	environment *new_env;
 	char *identifier;
@@ -190,12 +190,12 @@ value *evaluate(environment *env, NODE *node, int flag) {
 		case LE_OP:
 		case GE_OP:
 		case '!':
-			lhs = evaluate(env, node->left, flag);
-			rhs = evaluate(env, node->right, flag);
+			lhs = evaluate(env, node->left, flag, return_type);
+			rhs = evaluate(env, node->right, flag, return_type);
 			return arithmetic(env, type_of(node), lhs, rhs);
 		case '=':
-			lhs = evaluate(env, node->left, flag);
-			rhs = evaluate(env, node->right, flag);
+			lhs = evaluate(env, node->left, flag, return_type);
+			rhs = evaluate(env, node->right, flag, return_type);
 			if (rhs && rhs->value_type!=VT_INTEGR && rhs->value_type!=VT_FUNCTN) {
 				if (rhs->value_type == VT_STRING) {
 					rhs = get(env, rhs->data.string_value);
@@ -214,9 +214,9 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			return NULL;
 		case APPLY:
 			/* FN Name */
-			lhs = evaluate(env, node->left, flag);
+			lhs = evaluate(env, node->left, flag, return_type);
 			/* Params */
-			rhs = evaluate(env, node->right, flag);
+			rhs = evaluate(env, node->right, flag, return_type);
 			/* Lookup function */
 			temp = search(env, to_string(lhs), VT_FUNCTN, VT_ANY, 1);
 			return execute_fn(env, temp, rhs, flag);		
@@ -229,22 +229,22 @@ value *evaluate(environment *env, NODE *node, int flag) {
 		case INT:
 			return int_value(type_of(node));
 		case LEAF:
-			return evaluate(env, node->left, flag);
+			return evaluate(env, node->left, flag, return_type);
 		case IF:
 			new_env = create_environment(env);
 			/* LHS is condition */
-			lhs = evaluate(env, node->left, flag);
+			lhs = evaluate(env, node->left, flag, return_type);
 			/* Store temporary value indicating condition outcome */
 			assign(new_env, string_value(IF_EVAL_SYMBOL), lhs, 1);
 			if (to_int(env, lhs)) {
 				/* Condition is true */
-				return evaluate(new_env, node->right, flag);
+				return evaluate(new_env, node->right, flag, return_type);
 			}
 			else {
 				/* We need to look at whether the RHS is ELSE */
 				if (type_of(node->right) == ELSE) {
 					/* we need to traverse into the else */
-					return evaluate(new_env, node->right, flag);					
+					return evaluate(new_env, node->right, flag, return_type);					
 				}
 			}
 			return NULL;
@@ -252,10 +252,10 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			temp = last_if_evaluation(env);
 			if (!temp) fatal("Could not find evaluation of last IF statement");
 			if (to_int(env, temp)) {
-				return evaluate(env, node->left, flag);					
+				return evaluate(env, node->left, flag, return_type);					
 			}
 			else {
-				return evaluate(env, node->right, flag);					
+				return evaluate(env, node->right, flag, return_type);					
 			}
 			return NULL;
 		case CONTINUE:
@@ -264,8 +264,8 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			return string_value(BREAK_EVAL_SYMBOL);
 		case WHILE:
 			new_env = create_environment(env);
-			while(to_int(new_env, evaluate(new_env, node->left, flag))) {
-				rhs = evaluate(new_env, node->right, flag);
+			while(to_int(new_env, evaluate(new_env, node->left, flag, return_type))) {
+				rhs = evaluate(new_env, node->right, flag, return_type);
 				if (rhs!=NULL && rhs->value_type==VT_STRING && strcmp(to_string(rhs), BREAK_EVAL_SYMBOL)==0) {
 					break;
 				}
@@ -280,7 +280,7 @@ value *evaluate(environment *env, NODE *node, int flag) {
 		case 'D':
 			/* LHS is FN definition */
 			/* LHS is executed in current environment */
-			lhs = evaluate(env, node->left, flag);
+			lhs = evaluate(env, node->left, flag, return_type);
 			if (lhs!=NULL) {
 				/* Point function to the correct fn body */
  				lhs->data.func->node_value = node->right;
@@ -290,20 +290,20 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			return NULL;
 		case 'd':
 			/* LHS is the type */
-			lhs = evaluate(env, node->left, flag);
+			lhs = evaluate(env, node->left, flag, return_type);
 			/* RHS is fn name & params */
-			rhs = evaluate(env, node->right, flag);
+			rhs = evaluate(env, node->right, flag, return_type);
 			/* Store return type */
 			rhs->data.func->return_type = to_int(env, lhs);
 			return rhs;
 		case 'F':
 			/* FN name in LHS */
-			lhs = evaluate(env, node->left, flag);
+			lhs = evaluate(env, node->left, flag, return_type);
 			/* Pull our parameters */
-			rhs = evaluate(env, node->right, INTERPRET_PARAMS);
+			rhs = evaluate(env, node->right, INTERPRET_PARAMS, return_type);
 			return build_function(env, lhs, rhs);
 		case RETURN:
-			lhs = evaluate(env, node->left, flag);
+			lhs = evaluate(env, node->left, flag, return_type);
 			/* Provide lookup for non-constants */
 			if (lhs && lhs->value_type!=VT_INTEGR) {
 				if (lhs->value_type == VT_STRING) {
@@ -314,10 +314,11 @@ value *evaluate(environment *env, NODE *node, int flag) {
 				}
 				if (!lhs) fatal("Undeclared identifier");
 			}
+			type_check_return(lhs, return_type);
 			return lhs;
 		case ',':
-			lhs = evaluate(env, node->left, flag);
-			rhs = evaluate(env, node->right, flag);
+			lhs = evaluate(env, node->left, flag, return_type);
+			rhs = evaluate(env, node->right, flag, return_type);
 			if (lhs && rhs) {
 				return join(lhs, rhs);
 			}
@@ -326,12 +327,12 @@ value *evaluate(environment *env, NODE *node, int flag) {
 			/* Do not pre-register formal parameters */
 			if (flag != INTERPRET_PARAMS) {
 				/* First sweep - initialise variables with correct type - assignment typechecking done here */
-				register_variable_subtree(env, node);
+				register_variable_subtree(env, node, return_type);
 			}
 			/* Variable Type */
-			lhs = evaluate(env, node->left, flag);
+			lhs = evaluate(env, node->left, flag, return_type);
 			/* Variable Name */
-			rhs = evaluate(env, node->right, flag);
+			rhs = evaluate(env, node->right, flag, return_type);
 			if (flag == INTERPRET_PARAMS) {
 				return int_param(to_string(rhs), to_int(env, lhs));
 			}
@@ -340,9 +341,9 @@ value *evaluate(environment *env, NODE *node, int flag) {
 		case ';':
 			lhs = NULL;
 			rhs = NULL;
-			if (node->left!=NULL) lhs = evaluate(env, node->left, flag);
+			if (node->left!=NULL) lhs = evaluate(env, node->left, flag, return_type);
 			if (lhs==NULL) {
-				if (node->right!=NULL) rhs = evaluate(env, node->right, flag);			
+				if (node->right!=NULL) rhs = evaluate(env, node->right, flag, return_type);			
 				if (rhs==NULL) {
 					return NULL;
 				}
@@ -364,7 +365,7 @@ void start_interpret(NODE *start) {
 	/* Store a reference to the NULL function */
 	null_function = build_null_function();
 	initial_environment = create_environment(NULL);
-	evaluate(initial_environment, start, INTERPRET_FN_SCAN);
+	evaluate(initial_environment, start, INTERPRET_FN_SCAN, INT);
 	debug("Function scan complete.");
 	if (main_entry_point(initial_environment)) {
 		value *return_value;

@@ -20,6 +20,22 @@ value *void_value(void) {
 	return tmp_value;
 }
 
+/* Check that the value can be returned by the function with a given declared return type */
+void type_check_return(value *returned_value, int declared_return_type) {
+	if (!returned_value && declared_return_type!=VOID) fatal("Expected a return value!");
+	if (declared_return_type == INT) {
+		if (returned_value->value_type != VT_INTEGR) {
+			fatal("Expected integer return value");	
+		}
+	}
+	if (declared_return_type == FUNCTION) {
+		if (returned_value->value_type != VT_FUNCTN) {
+			fatal("Expected function return value");	
+		}
+	}
+}
+
+
 /* Check that a variable with value: variable_value matches up with the declared type */
 void type_check_assignment(value *variable_name, value *variable_value, int declared_type) {
 	if (!variable_name || !variable_value) fatal("Not enough information to typecheck statement!");

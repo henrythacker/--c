@@ -3,7 +3,7 @@ function twice(function f) {
 	return g;
 }
 
-function add(int a) {
+int add(int a) {
 	return a + 1;
 }
 

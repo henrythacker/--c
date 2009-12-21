@@ -12,6 +12,7 @@
 /* Fn prototypes */
 void assert(int, char *);
 void type_check_assignment(value *, value *, int);
+void type_check_return(value *, int);
 value *void_value(void);
 
 #endif

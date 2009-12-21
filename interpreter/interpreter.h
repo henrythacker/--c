@@ -25,10 +25,10 @@ value *null_function;
 /* Fn prototypes */
 void start_interpret(NODE *);
 value *string_temporary(char *);
-void register_variable_subtree(environment *, NODE *);
+void register_variable_subtree(environment *, NODE *, int);
 value *int_temporary(int);
 int param_count(value *);
 char *to_string(value *);
-value *evaluate(environment *, NODE *, int);
+value *evaluate(environment *, NODE *, int, int);
 
 #endif
