@@ -1,4 +1,4 @@
-/*Result: 10*/
+/*Result: 2*/
 int add1(int i) {
 	return i + 1;
 }
