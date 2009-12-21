@@ -64,9 +64,6 @@ value *execute_fn(environment *env, value *fn_reference, value *params, int flag
 			node = fn_reference->data.func->node_value;		
 			definition_env = fn_reference->data.func->definition_env;
 			new_env = create_environment(definition_env);
-			if (!node) {
-				fatal("Function '%s' is undefined", fn_reference->identifier);	
-			}
 			/* Copy parameters into environment */
 			if (param_count(params) > 0) {
 				define_parameters(new_env, fn_reference, params, env);
