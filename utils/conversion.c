@@ -88,6 +88,13 @@ char *to_string(value *val) {
 	return val->data.string_value;
 }
 
+/* Return the correct string representation for a variable / string */
+char *correct_string_rep(value *val) {
+	if (val==NULL) return NULL;
+	if (val->value_type==VT_STRING) return to_string(val);
+	return val->identifier;
+}
+
 int to_int(environment *env, value *val) {
 	if (val==NULL) return UNDEFINED;
 	if (val->value_type==VT_STRING && env) {

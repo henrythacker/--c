@@ -1,10 +1,5 @@
-
-
-
 int main() {
-	return test(3);
-}
-
-int test(function f) {
-	return main;
+	if (1 > 2) {
+		return 3;
+	}
 }

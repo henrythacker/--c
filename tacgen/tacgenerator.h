@@ -6,19 +6,20 @@
 #include <limits.h>
 #include "C.tab.h"
 #include "nodes.h"
+#include "environment2.h"
 #include "conversion.h"
 #include "token.h"
 
 /* Fn prototypes */
 void start_tac_gen(NODE *);
-char *make_simple(environment *, NODE *);
+value *make_simple(environment *, NODE *);
 
 /* TAC structure */
 typedef struct tac_quad {
 	char *op;
-	char *operand1;
-	char *operand2;	
-	char *result;
+	value *operand1;
+	value *operand2;	
+	value *result;
 	struct tac_quad *next;		
 }tac_quad;
 
