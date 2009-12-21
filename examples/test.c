@@ -1,5 +1,6 @@
 int main() {
 	if (1 > 2) {
-		return 3;
+		int a = 3;
+		return a;
 	}
 }

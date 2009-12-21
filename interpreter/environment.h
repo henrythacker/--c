@@ -25,7 +25,10 @@
 #define VT_VOID INT_MIN + 5
 
 /* Any type - special type used in searches */
-#define VT_ANY INT_MIN + 5
+#define VT_ANY INT_MIN + 6
+
+/* Temporary value */
+#define VT_TEMPORARY INT_MIN + 7
 
 /* Special value which stores last if evaluation in environment */
 #define IF_EVAL_SYMBOL "$IF"

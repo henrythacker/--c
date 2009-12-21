@@ -190,19 +190,19 @@ void build_while_stmt(environment *env, NODE *node, int while_count, int if_coun
 value *make_simple(environment *env, NODE *node) {
 	int i_value = 0;
 	char *s_tmp;
-	value *val1, *val2, *temporary;
+	value *val1, *val2, *temporary, *temp;
 	static int if_count = 0;
 	static int while_count = 0;	
+	environment *new_env;
 	if (node==NULL) return NULL;
 	switch(type_of(node)) {
 		case LEAF: 
 			return make_simple(env, node->left);
 		case CONSTANT:
-			/* Convert int to string */
-			s_tmp = malloc(sizeof(char) * 15);
 			i_value = cast_from_node(node)->value;
+			s_tmp = malloc(sizeof(char) * 25);
 			sprintf(s_tmp, "%d", i_value);
-			return string_value(s_tmp);
+			return int_value(i_value);
 		case IDENTIFIER:
 			return string_value(cast_from_node(node)->lexeme);
 		case IF:
@@ -219,11 +219,28 @@ value *make_simple(environment *env, NODE *node) {
 			append_code(make_label(s_tmp));
 			return NULL;
 		case WHILE:
-			build_while_stmt(env, node, ++while_count, ++if_count);
+			new_env = create_environment(env);
+			build_while_stmt(new_env, node, ++while_count, ++if_count);
 			return NULL;	
 		case '=':
 			val1 = make_simple(env, node->left);
 			val2 = make_simple(env, node->right);
+			if (val2 && val2->value_type!=VT_INTEGR && val2->value_type!=VT_FUNCTN) {
+				if (val2->value_type == VT_STRING) {
+					val2 = get(env, val2->data.string_value);
+				}
+				else {
+					printf("2\n");					
+					val2 = get(env, val2->identifier);
+				}
+				if (!val2) fatal("Undeclared identifier");					
+			}
+			/* Check the LHS variable has already been defined */
+			temp = get(env, to_string(val1));
+			assert(temp!=NULL, "Variable not defined");
+			/* Type check the assignment */
+			type_check_assignment(val1, val2, vt_type_convert(temp->value_type));
+			assign(env, val1, val2, 0);
 			append_code(make_quad_value("=", val2, NULL, val1, TT_ASSIGN));
 			return NULL;
 		case '*':
@@ -243,6 +260,7 @@ value *make_simple(environment *env, NODE *node) {
 			append_code(make_quad_value(type_to_string(type_of(node)), val1, val2, temporary, TT_OP));
 			return temporary;
 		case '~':
+			register_variable_subtree(env, node);
 			make_simple(env, node->left);
 			make_simple(env, node->right);			
 			return NULL;

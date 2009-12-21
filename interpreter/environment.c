@@ -88,6 +88,7 @@ void debug_print_value(value *val) {
 			case VT_VOID:
 				printf("\tvoid - identifier: %s\n", val->identifier);
 				break;
+			case VT_TEMPORARY:
 			case VT_INTEGR:
 				printf("\tint - identifier: %s, value: %d\n", val->identifier, val->data.int_value);
 				break;
@@ -193,6 +194,7 @@ value *store(environment *env, int value_type, char *identifier, value *val, int
 	}
 	/* Assign correct value */
 	switch(value_type) {
+		case VT_TEMPORARY:
 		case VT_INTEGR:
 			new_value->data.int_value = val->data.int_value;
 			break;

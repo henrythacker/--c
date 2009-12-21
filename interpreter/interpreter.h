@@ -25,6 +25,7 @@ value *null_function;
 /* Fn prototypes */
 void start_interpret(NODE *);
 value *string_temporary(char *);
+void register_variable_subtree(environment *, NODE *);
 value *int_temporary(int);
 int param_count(value *);
 char *to_string(value *);
