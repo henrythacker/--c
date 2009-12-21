@@ -1,3 +1,4 @@
+/*Result: 10*/
 int main() {
 	int a = 10;
 	if (1) {

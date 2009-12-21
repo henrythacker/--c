@@ -1,3 +1,5 @@
+/*Result: 34*/
+
 /*
 *	Sample --C Fibonacci Programme
 *	Henry Thacker

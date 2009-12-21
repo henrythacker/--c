@@ -1,3 +1,5 @@
+/*Result: 720*/
+
 /*
 *	Sample --C Factorial Programme
 *	Henry Thacker

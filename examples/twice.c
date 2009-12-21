@@ -1,3 +1,5 @@
+/*Result: 7*/
+
 function twice(function f) { 
 	int g(int x) { return f(f(x)); } 
 	return g;

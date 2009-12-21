@@ -1,3 +1,5 @@
+/*Result: 5*/
+
 /*
 *	Sample --C While Loop Programme
 *	Henry Thacker

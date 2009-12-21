@@ -1,3 +1,5 @@
+/*Result: 14*/
+
 function cplus(int a) { 
 	int cplusa(int b) { 
 		return a+b; 

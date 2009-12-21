@@ -1,3 +1,5 @@
+/*Result: 9*/
+
 /*
 *	Sample --C max/min integer Programme
 *	Henry Thacker
