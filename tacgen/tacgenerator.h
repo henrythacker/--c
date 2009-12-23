@@ -7,11 +7,14 @@
 #define TT_OP 153
 #define TT_ASSIGN 154
 #define TT_RETURN 155
-#define TT_KEYWORD 156
-#define TT_FN_DEF 157
-#define TT_POP_PARAM 158
-#define TT_PUSH_PARAM 159
-#define TT_FN_CALL 160
+#define TT_BEGIN_FN 156
+#define TT_END_FN 157
+#define TT_FN_DEF 158
+#define TT_POP_PARAM 159
+#define TT_PUSH_PARAM 160
+#define TT_FN_CALL 161
+
+#define EMBEDDED_FNS 300
 
 #include <stdio.h>
 #include <stdlib.h>

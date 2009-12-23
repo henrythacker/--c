@@ -32,7 +32,7 @@ void print_tac(tac_quad *quad) {
 			printf("%s:\n", to_string(quad->operand1));
 			break;
 		case TT_FN_DEF:
-			printf("_%s:\n", to_string(quad->operand1));
+			printf("_%s:\nBeginFn %d\n", to_string(quad->operand1), param_count(quad->operand1));
 			break;	
 		case TT_FN_CALL:
 			printf("%s = CallFn _%s\n", correct_string_rep(quad->result), to_string(quad->operand1));
@@ -63,12 +63,12 @@ void print_tac(tac_quad *quad) {
 				printf("Return");
 			}
 			break;
-		case TT_KEYWORD:
-			if (quad->operand1) {
-				printf("%s\n", correct_string_rep(quad->operand1));
-			}
+		case TT_BEGIN_FN:
+			printf("BeginFn %d\n", param_count(quad->operand1));
 			break;
-		break;
+		case TT_END_FN:
+			printf("EndFn\n");
+			break;			
 		default:
 			fatal("Unknown TAC Quad type '%d'", quad->type);
 	}
@@ -137,9 +137,14 @@ tac_quad *make_return(value *return_value) {
 	return make_quad_value("", return_value, NULL, NULL, TT_RETURN);
 }
 
-/* Generate a statement with single keyword */
-tac_quad *make_keyword(char *keyword) {
-	return make_quad_value("", string_value(keyword), NULL, NULL, TT_KEYWORD);
+/* Generate an END_FN statement */
+tac_quad *make_end_fn() {
+	return make_quad_value("", NULL, NULL, NULL, TT_END_FN);
+}
+
+/* Generate an BEGIN_FN statement */
+tac_quad *make_begin_fn(value *fn_def) {
+	return make_quad_value("", fn_def, NULL, NULL, TT_BEGIN_FN);
 }
 
 /* Generate FN Definition label */
@@ -349,9 +354,19 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			}			
 			return NULL;
 		case 'D':
+
 			/* val1 is FN definition */
 			/* val1 is executed in current environment */
 			val1 = make_simple(env, node->left, flag, return_type);
+			
+			/* If this is an embedded function, generate a goto to the end of the fn def */
+			/* Otherwise, we will inadvertendly attempt to execute the inner fn */
+			s_tmp = malloc(sizeof(char) * (strlen(val1->identifier) + 2));
+			sprintf(s_tmp, "~%s", val1->identifier);
+			if (flag==EMBEDDED_FNS) {
+				append_code(make_goto(s_tmp));
+			}
+			
 			if (val1!=NULL) {
 				/* Point function to the correct fn body */
 				val1->data.func->node_value = node->right;
@@ -365,10 +380,13 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			/* Define parameters with default empty values */
 			register_params(new_env, val2->data.func->params);
 			/* Look inside fn body */
-			val2 = make_simple(new_env, node->right, flag, val1->data.func->return_type);
+			val2 = make_simple(new_env, node->right, EMBEDDED_FNS, val1->data.func->return_type);
 			/* Write end of function marker */
-			append_code(make_keyword("EndFn"));
-			
+			append_code(make_end_fn());
+			/* Write end of function label if embedded fn */
+			if (flag==EMBEDDED_FNS) {
+				append_code(make_label(s_tmp));
+			}
 			return NULL;
 		case 'd':
 			/* val1 is the type */
@@ -404,9 +422,6 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			val2 = make_simple(env, node->right, flag, return_type);
 			if (val1 && val2) {
 				return join(val1, val2);
-			}
-			else {
-				fatal("HERE IS THE PROBLEM\n");
 			}
 			return NULL;	
 		case APPLY:
