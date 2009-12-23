@@ -1,12 +1,12 @@
 #include "tacgenerator.h"
 
 /* Generate a new temporary */
-value *generate_temporary(environment *env) {
+value *generate_temporary(environment *env, value *null_value) {
 	char *tmp;
 	static int temp_count = 0;
 	tmp = malloc(sizeof(char) * 15);
 	sprintf(tmp, "t%d", ++temp_count);
-	return register_temporary(env, tmp);
+	return register_temporary(env, tmp, null_value);
 }
 
 /* Add TAC quad onto end of generated code */
@@ -34,8 +34,14 @@ void print_tac(tac_quad *quad) {
 		case TT_FN_DEF:
 			printf("_%s:\n", to_string(quad->operand1));
 			break;	
+		case TT_FN_CALL:
+			printf("%s = CallFn _%s\n", correct_string_rep(quad->result), to_string(quad->operand1));
+			break;			
 		case TT_POP_PARAM:
-			printf("PopParam %s\n", quad->operand1->identifier);
+			printf("PopParam %s\n", correct_string_rep(quad->operand1));
+			break;
+		case TT_PUSH_PARAM:
+			printf("PushParam %s\n", correct_string_rep(quad->operand1));
 			break;
 		case TT_IF:
 			printf("if %s goto %s\n", correct_string_rep(quad->operand1), correct_string_rep(quad->result));
@@ -51,10 +57,10 @@ void print_tac(tac_quad *quad) {
 			break;
 		case TT_RETURN:
 			if (quad->operand1) {
-				printf("return %s\n", correct_string_rep(quad->operand1));
+				printf("Return %s\n", correct_string_rep(quad->operand1));
 			}
 			else {
-				printf("return");
+				printf("Return");
 			}
 			break;
 		case TT_KEYWORD:
@@ -131,7 +137,7 @@ tac_quad *make_return(value *return_value) {
 	return make_quad_value("", return_value, NULL, NULL, TT_RETURN);
 }
 
-/* Generate RETURN statement with given return value */
+/* Generate a statement with single keyword */
 tac_quad *make_keyword(char *keyword) {
 	return make_quad_value("", string_value(keyword), NULL, NULL, TT_KEYWORD);
 }
@@ -139,6 +145,11 @@ tac_quad *make_keyword(char *keyword) {
 /* Generate FN Definition label */
 tac_quad *make_fn_def(value *fn_def) {
 	return make_quad_value("", string_value(fn_def->identifier), NULL, NULL, TT_FN_DEF);
+}
+
+/* Generate FN call */
+tac_quad *make_fn_call(value *result, value *fn_def) {
+	return make_quad_value("", fn_def, NULL, result, TT_FN_CALL);
 }
 
 /* Build necessary code for an if statement */
@@ -242,6 +253,15 @@ void register_params(environment *env, value *param_list) {
 	}
 }
 
+/* Push params on param stack in reverse order (recursively) */
+tac_quad *push_params(value *params_head) {
+	if (!params_head) return NULL;
+	if (params_head->next) {
+		append_code(push_params(params_head->next));
+	}
+	return make_quad_value("", params_head, NULL, NULL, TT_PUSH_PARAM);		
+}
+
 /* 
  * Make the given NODE simple - i.e. return a temporary for complex subtrees 
  * The appropriate code is also generated and pushed onto the code stack
@@ -312,7 +332,7 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 		case LE_OP:
 		case GE_OP:				
 		case EQ_OP:
-			temporary = generate_temporary(env);
+			temporary = generate_temporary(env, int_value(0));
 			val1 = make_simple(env, node->left, flag, return_type);
 			val2 = make_simple(env, node->right, flag, return_type);
 			append_code(make_quad_value(type_to_string(type_of(node)), val1, val2, temporary, TT_OP));
@@ -344,9 +364,11 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			new_env = create_environment(env);
 			/* Define parameters with default empty values */
 			register_params(new_env, val2->data.func->params);
-			val2 = make_simple(new_env, node->right, flag, return_type);
+			/* Look inside fn body */
+			val2 = make_simple(new_env, node->right, flag, val1->data.func->return_type);
 			/* Write end of function marker */
 			append_code(make_keyword("EndFn"));
+			
 			return NULL;
 		case 'd':
 			/* val1 is the type */
@@ -362,19 +384,69 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			/* Pull our parameters */
 			val2 = make_simple(env, node->right, INTERPRET_PARAMS, return_type);
 			return build_function(env, val1, val2);
+		case RETURN:
+			val1 = make_simple(env, node->left, flag, return_type);
+			/* Provide lookup for non-constants */
+			if (val1 && val1->value_type!=VT_INTEGR) {
+				if (val1->value_type == VT_STRING) {
+					val1 = get(env, val1->data.string_value);
+				}
+				else {
+					val1 = get(env, val1->identifier);
+				}
+				if (!val1) fatal("Undeclared identifier");
+			}
+			type_check_return(val1, return_type);
+			append_code(make_return(val1));
+			return NULL;
 		case ',':
 			val1 = make_simple(env, node->left, flag, return_type);
 			val2 = make_simple(env, node->right, flag, return_type);
 			if (val1 && val2) {
 				return join(val1, val2);
 			}
-			return NULL;			
+			else {
+				fatal("HERE IS THE PROBLEM\n");
+			}
+			return NULL;	
+		case APPLY:
+			/* FN Name */
+			val1 = make_simple(env, node->left, flag, return_type);
+			/* Params */
+			val2 = make_simple(env, node->right, flag, return_type);
+			append_code(push_params(val2));
+			/* Lookup function */
+			temp = search(env, to_string(val1), VT_FUNCTN, VT_ANY, 1);
+			if (temp) {
+				int fn_return_type = temp->data.func->return_type;
+				/* Temporary for result (if any) */
+				switch(fn_return_type) {
+					case INT:
+						temporary = generate_temporary(env, int_value(0));
+						break;
+					case VOID:
+						temporary = generate_temporary(env, NULL);
+						break;						
+					case FUNCTION:
+						temporary = generate_temporary(env, null_fn);
+						break;
+					default:
+						fatal("Unknown Return Type %d", fn_return_type);
+						return NULL;
+				}
+				append_code(make_fn_call(temporary, val1));
+			}
+			return temporary;
+		case FUNCTION:
 		case INT:
 		case VOID:
-			return NULL;
-		default:
+			return int_value(type_of(node));
+		case ';':
 			make_simple(env, node->left, flag, return_type);
 			make_simple(env, node->right, flag, return_type);			
+			return NULL;
+		default:
+			fatal("Unrecognised node type");
 			return NULL;
 	}
 	

@@ -11,6 +11,6 @@
 #include "environment.h"
 #include "utilities.h"
 
-value *register_temporary(environment *, char *);
+value *register_temporary(environment *, char *, value *);
 
 #endif

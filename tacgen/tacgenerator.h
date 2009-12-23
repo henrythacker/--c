@@ -11,6 +11,7 @@
 #define TT_FN_DEF 157
 #define TT_POP_PARAM 158
 #define TT_PUSH_PARAM 159
+#define TT_FN_CALL 160
 
 #include <stdio.h>
 #include <stdlib.h>

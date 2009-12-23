@@ -114,6 +114,7 @@ int to_int(environment *env, value *val) {
 /* Return the correct string representation for a variable / string */
 char *correct_string_rep(value *val) {
 	if (val==NULL) return NULL;
+	if (val->temporary) return val->identifier;
 	if (val->value_type==VT_STRING) return to_string(val);
 	if (val->value_type==VT_INTEGR) return cmm_itoa(to_int(NULL, val));
 	return val->identifier;

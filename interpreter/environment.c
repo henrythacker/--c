@@ -84,22 +84,26 @@ char *return_type_as_string(int type) {
 /* Recursively print values */
 void debug_print_value(value *val) {
 	if (DEBUG_ON && val) {
-		switch(val->value_type) {
-			case VT_VOID:
-				printf("\tvoid - identifier: %s\n", val->identifier);
-				break;
-			case VT_TEMPORARY:
-			case VT_INTEGR:
-				printf("\tint - identifier: %s, value: %d\n", val->identifier, val->data.int_value);
-				break;
-			case VT_STRING:	
-				/* A string should never be stored in the hashtable - this language doesn't have strings */
-				break;			
-			case VT_FUNCTN:			
-				printf("\tfunc - identifier: %s, entry-point: %p, returns: %s, definition-env: %p, params: %d\n", val->identifier, val->data.func->node_value, return_type_as_string(val->data.func->return_type), val->data.func->definition_env, param_count(val));			
-				break;			
-			case VT_LINKED:						
-				break;			
+		if (val->temporary) {
+			printf("\ttemporary - identifier: %s\n", val->identifier);
+		}
+		else {
+			switch(val->value_type) {
+				case VT_VOID:
+					printf("\tvoid - identifier: %s\n", val->identifier);
+					break;
+				case VT_INTEGR:
+					printf("\tint - identifier: %s, value: %d\n", val->identifier, val->data.int_value);
+					break;
+				case VT_STRING:	
+					/* A string should never be stored in the hashtable - this language doesn't have strings */
+					break;			
+				case VT_FUNCTN:			
+					printf("\tfunc - identifier: %s, entry-point: %p, returns: %s, definition-env: %p, params: %d\n", val->identifier, val->data.func->node_value, return_type_as_string(val->data.func->return_type), val->data.func->definition_env, param_count(val));			
+					break;			
+				case VT_LINKED:						
+					break;			
+			}
 		}
 		debug_print_value(val->next);
 	}
@@ -118,11 +122,11 @@ void define_parameters(environment *env, value *formal, value *actual, environme
 			tmp = get(search_env, actual_param->data.string_value);
 			if (!tmp) fatal("Could not look-up parameter value");
 			type_check_assignment(string_value(formal_param->identifier), tmp, to_int(NULL, formal_param));
-			store(env, tmp->value_type, formal_param->identifier, tmp, 1, 1, 0);
+			store(env, tmp->value_type, formal_param->identifier, tmp, 1, 1, 0, 0);
 		}
 		else {
 			type_check_assignment(string_value(formal_param->identifier), actual_param, to_int(NULL, formal_param));
-			store(env, actual_param->value_type, formal_param->identifier, actual_param, 1, 1, 0);
+			store(env, actual_param->value_type, formal_param->identifier, actual_param, 1, 1, 0, 0);
 		}
 		formal_param = formal_param->next;
 		actual_param = actual_param->next;
@@ -150,11 +154,11 @@ value *store_function(environment *env, value *func) {
 	/* Check we were passed valid data */
 	if (!env || !func) return;
 	if (func->value_type!=VT_FUNCTN) return;
-	return store(env, VT_FUNCTN, func->identifier, func, 0, 1, 1);
+	return store(env, VT_FUNCTN, func->identifier, func, 0, 1, 1, 0);
 }
 
 /* Store variable in environment */
-value *store(environment *env, int value_type, char *identifier, value *val, int is_param, int is_declarator, int is_fn_dec) {
+value *store(environment *env, int value_type, char *identifier, value *val, int is_param, int is_declarator, int is_fn_dec, int is_temporary) {
 	value *new_value;
 	/* Check entry will be valid */
 	if (!identifier || !val || val->value_type==VT_STRING) return NULL;
@@ -186,6 +190,7 @@ value *store(environment *env, int value_type, char *identifier, value *val, int
 		strcpy(new_value->identifier, identifier);
 		new_value->next = NULL;
 		new_value->value_type = value_type;
+		new_value->temporary = is_temporary;
 		/* Do we have any values in this position of the array? */
 		if (!env->values[hash_position]) {
 			/* Nothing exists here yet */
@@ -194,7 +199,6 @@ value *store(environment *env, int value_type, char *identifier, value *val, int
 	}
 	/* Assign correct value */
 	switch(value_type) {
-		case VT_TEMPORARY:
 		case VT_INTEGR:
 			new_value->data.int_value = val->data.int_value;
 			break;

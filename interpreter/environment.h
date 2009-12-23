@@ -27,9 +27,6 @@
 /* Any type - special type used in searches */
 #define VT_ANY INT_MIN + 6
 
-/* Temporary value */
-#define VT_TEMPORARY INT_MIN + 7
-
 /* Special value which stores last if evaluation in environment */
 #define IF_EVAL_SYMBOL "$IF"
 #define CONTINUE_EVAL_SYMBOL "$CONTINUE"
@@ -40,6 +37,7 @@ typedef struct value {
 	char *identifier;
 	struct value *next;
 	int value_type;
+	int temporary;
 	union {
 		char *string_value;
 		int int_value;
@@ -69,7 +67,7 @@ value *get(environment *, char *);
 extern value *string_value(char *);
 value *last_if_evaluation(environment *);
 void define_parameters(environment *, value *, value *, environment *);
-value *store(environment *, int, char *, value *, int, int, int);
+value *store(environment *, int, char *, value *, int, int, int, int);
 value *search(environment *, char *, int, int, int);
 value *store_function(environment *, value *);
 int environment_hash(char *);
