@@ -57,8 +57,9 @@ char *cmm_itoa(int int_val) {
 value *string_value(char *val) {
 	static int t_count = 0;
 	value *tmp_value = calloc(1, sizeof(value));
-	char temporary_name[10];
-	sprintf(temporary_name, "str%d", t_count);
+	char *temporary_name;
+	temporary_name = malloc(sizeof(char) * 15);
+	sprintf(temporary_name, "_str%d", t_count);
 	tmp_value->identifier = temporary_name;
 	tmp_value->value_type = VT_STRING;
 	tmp_value->data.string_value = (char *) malloc((sizeof(char) * strlen(val)) + 1);
@@ -71,8 +72,9 @@ value *string_value(char *val) {
 value *int_value(int val) {
 	static int t_count = 0;
 	value *tmp_value = calloc(1, sizeof(value));
-	char temporary_name[10];
-	sprintf(temporary_name, "int%d", t_count);
+	char *temporary_name;
+	temporary_name = malloc(sizeof(char) * 15);
+	sprintf(temporary_name, "_int%d", t_count);
 	tmp_value->identifier = temporary_name;
 	tmp_value->value_type = VT_INTEGR;
 	tmp_value->data.int_value = val;
@@ -85,8 +87,9 @@ value *int_value(int val) {
 value *untyped_value() {
 	static int t_count = 0;
 	value *tmp_value = calloc(1, sizeof(value));
-	char temporary_name[10];
-	sprintf(temporary_name, "ut%d", t_count);
+	char *temporary_name;
+	temporary_name = malloc(sizeof(char) * 15);
+	sprintf(temporary_name, "_ut%d", t_count);
 	tmp_value->identifier = temporary_name;
 	tmp_value->value_type = VT_UNTYPED;
 	t_count++;
@@ -129,6 +132,6 @@ char *correct_string_rep(value *val) {
 	if (val==NULL) return NULL;
 	if (val->temporary) return val->identifier;
 	if (val->value_type==VT_STRING) return to_string(val);
-	if (val->value_type==VT_INTEGR) return cmm_itoa(to_int(NULL, val));
+	if (val->value_type==VT_INTEGR && val->identifier[0]=='_') return cmm_itoa(to_int(NULL, val));
 	return val->identifier;
 }

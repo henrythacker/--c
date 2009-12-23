@@ -5,7 +5,7 @@ value *generate_temporary(environment *env, value *null_value) {
 	char *tmp;
 	static int temp_count = 0;
 	tmp = malloc(sizeof(char) * 15);
-	sprintf(tmp, "t%d", ++temp_count);
+	sprintf(tmp, "_t%d", ++temp_count);
 	return register_temporary(env, tmp, null_value);
 }
 
@@ -271,6 +271,60 @@ tac_quad *push_params(value *params_head) {
 	return make_quad_value("", params_head, NULL, NULL, TT_PUSH_PARAM);		
 }
 
+/* Declare variables underneath a declarator tree */
+void declare_variables_tac(environment *env, NODE *node, int variable_type, int return_type) {
+	value *variable_name = NULL;
+	if (env == NULL || node == NULL) {
+		return;
+	}
+	else if (type_of(node) == ',') {
+		declare_variables_tac(env, node->left, variable_type, return_type);
+		declare_variables_tac(env, node->right, variable_type, return_type);
+		return;		
+	}
+	else if (type_of(node) == '=') { /* Specific assignment */
+		variable_name = make_simple(env, node->left, 0, return_type);
+	}
+	else if (type_of(node) == LEAF) { /* Undefined assignment */
+		variable_name = make_simple(env, node->left, 0, return_type);		
+	}
+	/* Assign variable */
+	if (variable_name) {
+		/* Assign a default initialization value for this type */
+		switch(variable_type) {	
+			case INT:
+				assign(env, variable_name, int_value(0), 1);
+				break;
+			case VOID:	
+				assign(env, variable_name, void_value(), 1);						
+				break;
+			case FUNCTION:
+				assign(env, variable_name, null_function, 1);
+				break;
+		}
+	}
+	else {
+		fatal("Could not ascertain variable name!");
+	}
+}
+
+/* Go down the declarator tree initialising the variables, at this stage */
+void register_variable_subtree_tac(environment *env, NODE *node, int return_type) {
+	NODE *original_node = node;
+	/* Ensure we have all required params */
+	if (!env || !node || type_of(node) != '~') return;
+	/* Skip over LEAF nodes */
+	if (node->left != NULL && type_of(node->left) == LEAF) {
+		node = node->left;
+	}
+	if (node->left != NULL && (type_of(node->left) == VOID || type_of(node->left) == FUNCTION || type_of(node->left) == INT)) {
+		/* Find variable type */
+		int variable_type = to_int(NULL, make_simple(env, node->left, 0, return_type));
+		declare_variables_tac(env, original_node->right, variable_type, return_type);
+	}
+}
+
+
 /* 
  * Make the given NODE simple - i.e. return a temporary for complex subtrees 
  * The appropriate code is also generated and pushed onto the code stack
@@ -348,9 +402,9 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			if (flag != INTERPRET_FN_SCAN) append_code(make_quad_value(type_to_string(type_of(node)), val1, val2, temporary, TT_OP));
 			return temporary;
 		case '~':
-			if (flag != INTERPRET_PARAMS && flag != INTERPRET_FN_SCAN) {
+			if (flag != INTERPRET_PARAMS && flag!=INTERPRET_FN_SCAN) {
 				/* Params should not be registered, because at this point we're not in the correct environment */
-				register_variable_subtree(env, node, VT_ANY);
+				register_variable_subtree_tac(env, node, VT_ANY);
 			}
 			val1 = make_simple(env, node->left, flag, return_type);
 			val2 = make_simple(env, node->right, flag, return_type);
