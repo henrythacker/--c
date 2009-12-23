@@ -29,7 +29,7 @@ void print_tac(tac_quad *quad) {
 	if (quad==NULL) return;
 	switch(quad->type) {
 		case TT_LABEL:
-			printf("%s\n", to_string(quad->operand1));
+			printf("%s:\n", to_string(quad->operand1));
 			break;
 		case TT_IF:
 			printf("if %s goto %s\n", correct_string_rep(quad->operand1), correct_string_rep(quad->result));
@@ -117,7 +117,7 @@ void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *end_jum
 	
 	/* Generate if statement */
 	s_tmp = malloc(sizeof(char) * 25);
-	sprintf(s_tmp, "if%dtrue", if_count);
+	sprintf(s_tmp, "$if%dtrue", if_count);
 	append_code(make_if(val1, s_tmp));
 
 	/* Output false branch (i.e. else part) */	
@@ -128,12 +128,12 @@ void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *end_jum
 	
 	/* Generate goto end of if statement */
 	s_tmp = malloc(sizeof(char) * 25);
-	sprintf(s_tmp, "if%dend", if_count);
+	sprintf(s_tmp, "$if%dend", if_count);
 	append_code(make_goto(s_tmp));
 	
 	/* Generate label for start of true branch */
 	s_tmp = malloc(sizeof(char) * 25);
-	sprintf(s_tmp, "if%dtrue:", if_count);
+	sprintf(s_tmp, "$if%dtrue", if_count);
 	append_code(make_label(s_tmp));
 	
 	/* Output true branch */
@@ -153,7 +153,7 @@ void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *end_jum
 	
 	/* Generate end of IF stmt label */
 	s_tmp = malloc(sizeof(char) * 25);
-	sprintf(s_tmp, "if%dend:", if_count);
+	sprintf(s_tmp, "$if%dend", if_count);
 	append_code(make_label(s_tmp));
 }
 
@@ -165,12 +165,12 @@ void build_while_stmt(environment *env, NODE *node, int while_count, int if_coun
 	
 	/* Generate label for start of while loop */
 	s_tmp = malloc(sizeof(char) * 25);
-	sprintf(s_tmp, "while%d:", while_count);
+	sprintf(s_tmp, "$while%d", while_count);
 	append_code(make_label(s_tmp));
 	
 	/* Generate loop jump */
 	s_tmp = malloc(sizeof(char) * 25);
-	sprintf(s_tmp, "while%d", while_count);
+	sprintf(s_tmp, "$while%d", while_count);
 	loop_jmp = make_goto(s_tmp);
 	
 	/* Build IF stmt for condition */
@@ -178,7 +178,7 @@ void build_while_stmt(environment *env, NODE *node, int while_count, int if_coun
 	
 	/* End while loop stmt */
 	s_tmp = malloc(sizeof(char) * 25);
-	sprintf(s_tmp, "while%dend:", while_count);
+	sprintf(s_tmp, "$while%dend", while_count);
 	append_code(make_label(s_tmp));
 	
 }
@@ -210,12 +210,12 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			return NULL;
 		case BREAK:
 			s_tmp = malloc(sizeof(char) * 25);
-			sprintf(s_tmp, "while%dend", while_count);
+			sprintf(s_tmp, "$while%dend", while_count);
 			append_code(make_label(s_tmp));
 			return NULL;			
 		case CONTINUE:
 			s_tmp = malloc(sizeof(char) * 25);
-			sprintf(s_tmp, "while%d", while_count);
+			sprintf(s_tmp, "$while%d", while_count);
 			append_code(make_label(s_tmp));
 			return NULL;
 		case WHILE:
@@ -230,7 +230,6 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 					val2 = get(env, val2->data.string_value);
 				}
 				else {
-					printf("2\n");					
 					val2 = get(env, val2->identifier);
 				}
 				if (!val2) fatal("Undeclared identifier");					
@@ -277,6 +276,8 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 				/* Store function definition in environment */
 				store_function(env, val1);
 			}
+			/* Write out FN Name label */
+			append_code(make_label(val1->identifier));
 			/* Look inside body, but in new environment */
 			new_env = create_environment(env);
 			val2 = make_simple(new_env, node->right, flag, return_type);
