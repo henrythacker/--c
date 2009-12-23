@@ -6,6 +6,8 @@
 #define TT_LABEL 152
 #define TT_OP 153
 #define TT_ASSIGN 154
+#define TT_RETURN 155
+#define TT_KEYWORD 156
 
 #include <stdio.h>
 #include <stdlib.h>

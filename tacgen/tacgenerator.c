@@ -43,6 +43,20 @@ void print_tac(tac_quad *quad) {
 		case TT_OP:
 			printf("%s = %s %s %s\n", correct_string_rep(quad->result), correct_string_rep(quad->operand1), quad->op, correct_string_rep(quad->operand2));
 			break;
+		case TT_RETURN:
+			if (quad->operand1) {
+				printf("return %s\n", correct_string_rep(quad->operand1));
+			}
+			else {
+				printf("return");
+			}
+			break;
+		case TT_KEYWORD:
+			if (quad->operand1) {
+				printf("%s\n", correct_string_rep(quad->operand1));
+			}
+			break;
+		break;
 		default:
 			fatal("Unknown TAC Quad type '%d'", quad->type);
 	}
@@ -104,6 +118,16 @@ tac_quad *make_if(value *condition, char *true_label) {
 /* Generate IF statement from given condition and true jump label */
 tac_quad *make_goto(char *label_name) {
 	return make_quad_value("", string_value(label_name), NULL, NULL, TT_GOTO);
+}
+
+/* Generate RETURN statement with given return value */
+tac_quad *make_return(value *return_value) {
+	return make_quad_value("", return_value, NULL, NULL, TT_RETURN);
+}
+
+/* Generate RETURN statement with given return value */
+tac_quad *make_keyword(char *keyword) {
+	return make_quad_value("", string_value(keyword), NULL, NULL, TT_KEYWORD);
 }
 
 
@@ -281,6 +305,8 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			/* Look inside body, but in new environment */
 			new_env = create_environment(env);
 			val2 = make_simple(new_env, node->right, flag, return_type);
+			/* Write end of function marker */
+			append_code(make_keyword("EndFn"));
 			return NULL;
 		case 'd':
 			/* val1 is the type */
