@@ -354,11 +354,9 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			}			
 			return NULL;
 		case 'D':
-
 			/* val1 is FN definition */
 			/* val1 is executed in current environment */
 			val1 = make_simple(env, node->left, flag, return_type);
-			
 			/* If this is an embedded function, generate a goto to the end of the fn def */
 			/* Otherwise, we will inadvertendly attempt to execute the inner fn */
 			s_tmp = malloc(sizeof(char) * (strlen(val1->identifier) + 2));
@@ -366,7 +364,6 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			if (flag==EMBEDDED_FNS) {
 				append_code(make_goto(s_tmp));
 			}
-			
 			if (val1!=NULL) {
 				/* Point function to the correct fn body */
 				val1->data.func->node_value = node->right;
