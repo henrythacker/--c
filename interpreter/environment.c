@@ -176,6 +176,14 @@ value *store(environment *env, int value_type, char *identifier, value *val, int
 	}
 	else if (is_fn_dec && value_type==VT_FUNCTN && search(env, identifier, value_type, VT_ANY, 1) && !is_param) {
 		/* Functions may not be redefined if they exist anywhere in the local / global scope */
+		/* Only exception is if definition is EXACTLY the same, this is the case if the entry point */
+		/* of the two functions is the same. This can happen when we do an initial pre-scan and then scan */
+		/* over the whole AST again, for instance in the TAC generator. */
+		value * existing_fn = search(env, identifier, value_type, VT_ANY, 1);
+		if (existing_fn->data.func->node_value == val->data.func->node_value) {
+			/* Return ptr to existing entry */
+			return existing_fn;
+		}
 		fatal("Function '%s' redefines another function. Function redefinition is not allowed!", identifier);
 		return NULL;
 	}

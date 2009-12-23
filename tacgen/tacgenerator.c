@@ -42,7 +42,7 @@ void print_tac(tac_quad *quad) {
 			printf("%s = CallFn _%s\n", correct_string_rep(quad->result), to_string(quad->operand1));
 			break;			
 		case TT_POP_PARAM:
-			printf("PopParam %s\n", correct_string_rep(quad->operand1));
+			printf("PopParam %s\n", quad->operand1->identifier);
 			break;
 		case TT_PUSH_PARAM:
 			printf("PushParam %s\n", correct_string_rep(quad->operand1));
@@ -311,6 +311,7 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			build_while_stmt(new_env, node, ++while_count, ++if_count, flag, return_type);
 			return NULL;	
 		case '=':
+			if (flag == INTERPRET_FN_SCAN) return NULL;
 			val1 = make_simple(env, node->left, flag, return_type);
 			val2 = make_simple(env, node->right, flag, return_type);
 			if (val2 && val2->value_type!=VT_INTEGR && val2->value_type!=VT_FUNCTN) {
@@ -328,7 +329,7 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			/* Type check the assignment */
 			type_check_assignment(val1, val2, vt_type_convert(temp->value_type));
 			assign(env, val1, val2, 0);
-			append_code(make_quad_value("=", val2, NULL, val1, TT_ASSIGN));
+			if (flag != INTERPRET_FN_SCAN) append_code(make_quad_value("=", val2, NULL, val1, TT_ASSIGN));
 			return NULL;
 		case '*':
 		case '/':
@@ -344,10 +345,10 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			temporary = generate_temporary(env, int_value(0));
 			val1 = make_simple(env, node->left, flag, return_type);
 			val2 = make_simple(env, node->right, flag, return_type);
-			append_code(make_quad_value(type_to_string(type_of(node)), val1, val2, temporary, TT_OP));
+			if (flag != INTERPRET_FN_SCAN) append_code(make_quad_value(type_to_string(type_of(node)), val1, val2, temporary, TT_OP));
 			return temporary;
 		case '~':
-			if (flag != INTERPRET_PARAMS) {
+			if (flag != INTERPRET_PARAMS && flag != INTERPRET_FN_SCAN) {
 				/* Params should not be registered, because at this point we're not in the correct environment */
 				register_variable_subtree(env, node, VT_ANY);
 			}
@@ -366,7 +367,7 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			/* Otherwise, we will inadvertendly attempt to execute the inner fn */
 			s_tmp = malloc(sizeof(char) * (strlen(val1->identifier) + 2));
 			sprintf(s_tmp, "~%s", val1->identifier);
-			if (flag==EMBEDDED_FNS) {
+			if (flag == EMBEDDED_FNS) {
 				append_code(make_goto(s_tmp));
 			}
 			if (val1!=NULL) {
@@ -375,19 +376,21 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 				/* Store function definition in environment */
 				val2 = store_function(env, val1);
 			}
-			/* Write out FN Name label */
-			append_code(make_fn_def(val2));
-			/* Look inside body, but in new environment */
-			new_env = create_environment(env);
-			/* Define parameters with default empty values */
-			register_params(new_env, val2->data.func->params);
-			/* Look inside fn body */
-			val2 = make_simple(new_env, node->right, EMBEDDED_FNS, val1->data.func->return_type);
-			/* Write end of function marker */
-			append_code(make_end_fn());
-			/* Write end of function label if embedded fn */
-			if (flag==EMBEDDED_FNS) {
-				append_code(make_label(s_tmp));
+			if (flag != INTERPRET_FN_SCAN) {
+				/* Write out FN Name label */
+				append_code(make_fn_def(val2));
+				/* Look inside body, but in new environment */
+				new_env = create_environment(env);
+				/* Define parameters with default empty values */
+				register_params(new_env, val2->data.func->params);
+				/* Look inside fn body */
+				val2 = make_simple(new_env, node->right, EMBEDDED_FNS, val1->data.func->return_type);
+				/* Write end of function marker */
+				append_code(make_end_fn());
+				/* Write end of function label if embedded fn */
+				if (flag == EMBEDDED_FNS) {
+					append_code(make_label(s_tmp));
+				}
 			}
 			return NULL;
 		case 'd':
@@ -472,14 +475,16 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			fatal("Unrecognised node type");
 			return NULL;
 	}
-	
 }
 
 
 /* Start the TAC generator process at the top of the AST */
 void start_tac_gen(NODE *tree) {
 	null_fn = build_null_function();
-	environment *default_env = create_environment(NULL);
-	make_simple(default_env, tree, 0, 0);
+	/* Do a scan for function definitions first */
+	environment *initial_env = create_environment(NULL);
+	make_simple(initial_env, tree, INTERPRET_FN_SCAN, INT);
+	/* Actually generate the TAC */
+	make_simple(initial_env, tree, 0, 0);
 	print_tac(tac_output);
 }
