@@ -38,7 +38,7 @@ void print_tac(tac_quad *quad) {
 			printf("%s %s %s\n", correct_string_rep(quad->result), quad->op, correct_string_rep(quad->operand1));
 			break;			
 		case TT_GOTO:
-			printf("%s %s\n", correct_string_rep(quad->result), correct_string_rep(quad->operand1));
+			printf("goto %s\n", correct_string_rep(quad->operand1));
 			break;
 		case TT_OP:
 			printf("%s = %s %s %s\n", correct_string_rep(quad->result), correct_string_rep(quad->operand1), quad->op, correct_string_rep(quad->operand2));
@@ -81,13 +81,13 @@ char *type_to_string(int type) {
 }
 
 /* Build the correct code in the correct place for the else part */
-void build_else_part(environment *env, NODE *node, int true_part) {
+void build_else_part(environment *env, NODE *node, int true_part, int flag, int return_type) {
 	if (node==NULL || type_of(node)!=ELSE) return;
 	if (true_part) {
-		make_simple(env, node->left);
+		make_simple(env, node->left, flag, return_type);
 	}
 	else {
-		make_simple(env, node->right);		
+		make_simple(env, node->right, flag, return_type);		
 	}
 }
 
@@ -108,12 +108,12 @@ tac_quad *make_goto(char *label_name) {
 
 
 /* Build necessary code for an if statement */
-void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *end_jump) {
+void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *end_jump, int flag, int return_type) {
 	char *s_tmp;
 	value *val1, *val2, *temporary;
 	if (node==NULL || (type_of(node)!=IF && type_of(node)!=WHILE)) return;
 	/* LHS is condition */
-	val1 = make_simple(env, node->left);
+	val1 = make_simple(env, node->left, flag, return_type);
 	
 	/* Generate if statement */
 	s_tmp = malloc(sizeof(char) * 25);
@@ -123,13 +123,13 @@ void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *end_jum
 	/* Output false branch (i.e. else part) */	
 	if (type_of(node->right)==ELSE) {
 		/* Build code for false part */
-		build_else_part(env, node->right, 0);
+		build_else_part(env, node->right, 0, flag, return_type);
 	}
 	
 	/* Generate goto end of if statement */
 	s_tmp = malloc(sizeof(char) * 25);
 	sprintf(s_tmp, "if%dend", if_count);
-	append_code(make_label(s_tmp));
+	append_code(make_goto(s_tmp));
 	
 	/* Generate label for start of true branch */
 	s_tmp = malloc(sizeof(char) * 25);
@@ -139,11 +139,11 @@ void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *end_jum
 	/* Output true branch */
 	if (type_of(node->right)==ELSE) {
 		/* Build code for true part */
-		build_else_part(env, node->right, 1);
+		build_else_part(env, node->right, 1, flag, return_type);
 	}
 	else {
 		/* True part is whole right branch */
-		make_simple(env, node->right);
+		make_simple(env, node->right, flag, return_type);
 	}
 	
 	/* Check if extra loop jump has been specified (for WHILE loops etc) */
@@ -158,7 +158,7 @@ void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *end_jum
 }
 
 /* Build necessary code for a while statement */
-void build_while_stmt(environment *env, NODE *node, int while_count, int if_count) {
+void build_while_stmt(environment *env, NODE *node, int while_count, int if_count, int flag, int return_type) {
 	char *s_tmp, *val1, *val2, *temporary;
 	tac_quad *loop_jmp;
 	if (node==NULL || type_of(node)!=WHILE) return;
@@ -174,7 +174,7 @@ void build_while_stmt(environment *env, NODE *node, int while_count, int if_coun
 	loop_jmp = make_goto(s_tmp);
 	
 	/* Build IF stmt for condition */
-	build_if_stmt(env, node, if_count, loop_jmp);
+	build_if_stmt(env, node, if_count, loop_jmp, flag, return_type);
 	
 	/* End while loop stmt */
 	s_tmp = malloc(sizeof(char) * 25);
@@ -187,7 +187,7 @@ void build_while_stmt(environment *env, NODE *node, int while_count, int if_coun
  * Make the given NODE simple - i.e. return a temporary for complex subtrees 
  * The appropriate code is also generated and pushed onto the code stack
 */
-value *make_simple(environment *env, NODE *node) {
+value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 	int i_value = 0;
 	char *s_tmp;
 	value *val1, *val2, *temporary, *temp;
@@ -197,7 +197,7 @@ value *make_simple(environment *env, NODE *node) {
 	if (node==NULL) return NULL;
 	switch(type_of(node)) {
 		case LEAF: 
-			return make_simple(env, node->left);
+			return make_simple(env, node->left, flag, return_type);
 		case CONSTANT:
 			i_value = cast_from_node(node)->value;
 			s_tmp = malloc(sizeof(char) * 25);
@@ -206,7 +206,7 @@ value *make_simple(environment *env, NODE *node) {
 		case IDENTIFIER:
 			return string_value(cast_from_node(node)->lexeme);
 		case IF:
-			build_if_stmt(env, node, ++if_count, NULL);
+			build_if_stmt(env, node, ++if_count, NULL, flag, return_type);
 			return NULL;
 		case BREAK:
 			s_tmp = malloc(sizeof(char) * 25);
@@ -220,11 +220,11 @@ value *make_simple(environment *env, NODE *node) {
 			return NULL;
 		case WHILE:
 			new_env = create_environment(env);
-			build_while_stmt(new_env, node, ++while_count, ++if_count);
+			build_while_stmt(new_env, node, ++while_count, ++if_count, flag, return_type);
 			return NULL;	
 		case '=':
-			val1 = make_simple(env, node->left);
-			val2 = make_simple(env, node->right);
+			val1 = make_simple(env, node->left, flag, return_type);
+			val2 = make_simple(env, node->right, flag, return_type);
 			if (val2 && val2->value_type!=VT_INTEGR && val2->value_type!=VT_FUNCTN) {
 				if (val2->value_type == VT_STRING) {
 					val2 = get(env, val2->data.string_value);
@@ -255,21 +255,59 @@ value *make_simple(environment *env, NODE *node) {
 		case GE_OP:				
 		case EQ_OP:
 			temporary = generate_temporary(env);
-			val1 = make_simple(env, node->left);
-			val2 = make_simple(env, node->right);
+			val1 = make_simple(env, node->left, flag, return_type);
+			val2 = make_simple(env, node->right, flag, return_type);
 			append_code(make_quad_value(type_to_string(type_of(node)), val1, val2, temporary, TT_OP));
 			return temporary;
 		case '~':
-			register_variable_subtree(env, node);
-			make_simple(env, node->left);
-			make_simple(env, node->right);			
+			register_variable_subtree(env, node, VT_ANY);
+			val1 = make_simple(env, node->left, flag, return_type);
+			val2 = make_simple(env, node->right, flag, return_type);
+			if (flag == INTERPRET_PARAMS) {
+				return int_param(to_string(val2), to_int(env, val1));
+			}			
 			return NULL;
+		case 'D':
+			/* val1 is FN definition */
+			/* val1 is executed in current environment */
+			val1 = make_simple(env, node->left, flag, return_type);
+			if (val1!=NULL) {
+				/* Point function to the correct fn body */
+				val1->data.func->node_value = node->right;
+				/* Store function definition in environment */
+				store_function(env, val1);
+			}
+			/* Look inside body, but in new environment */
+			new_env = create_environment(env);
+			val2 = make_simple(new_env, node->right, flag, return_type);
+			return NULL;
+		case 'd':
+			/* val1 is the type */
+			val1 = make_simple(env, node->left, flag, return_type);
+			/* val2 is fn name & params */
+			val2 = make_simple(env, node->right, flag, return_type);
+			/* Store return type */
+			val2->data.func->return_type = to_int(env, val1);
+			return val2;
+		case 'F':
+			/* FN name in val1 */
+			val1 = make_simple(env, node->left, flag, return_type);
+			/* Pull our parameters */
+			val2 = make_simple(env, node->right, INTERPRET_PARAMS, return_type);
+			return build_function(env, val1, val2);
+		case ',':
+			val1 = make_simple(env, node->left, flag, return_type);
+			val2 = make_simple(env, node->right, flag, return_type);
+			if (val1 && val2) {
+				return join(val1, val2);
+			}
+			return NULL;			
 		case INT:
 		case VOID:
 			return NULL;
 		default:
-			make_simple(env, node->left);
-			make_simple(env, node->right);			
+			make_simple(env, node->left, flag, return_type);
+			make_simple(env, node->right, flag, return_type);			
 			return NULL;
 	}
 	
@@ -279,6 +317,6 @@ value *make_simple(environment *env, NODE *node) {
 /* Start the TAC generator process at the top of the AST */
 void start_tac_gen(NODE *tree) {
 	environment *default_env = create_environment(NULL);
-	make_simple(default_env, tree);
+	make_simple(default_env, tree, 0, 0);
 	print_tac(tac_output);
 }

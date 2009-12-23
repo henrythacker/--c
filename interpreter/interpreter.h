@@ -30,5 +30,6 @@ value *int_temporary(int);
 int param_count(value *);
 char *to_string(value *);
 value *evaluate(environment *, NODE *, int, int);
+value *build_function(environment *, value *, value *);
 
 #endif

@@ -14,11 +14,12 @@
 #include "nodes.h"
 #include "environment2.h"
 #include "conversion.h"
+#include "interpreter.h"
 #include "token.h"
 
 /* Fn prototypes */
 void start_tac_gen(NODE *);
-value *make_simple(environment *, NODE *);
+value *make_simple(environment *, NODE *, int, int);
 
 /* TAC structure */
 typedef struct tac_quad {
