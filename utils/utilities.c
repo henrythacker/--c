@@ -23,6 +23,10 @@ value *void_value(void) {
 /* Check that the value can be returned by the function with a given declared return type */
 void type_check_return(value *returned_value, int declared_return_type) {
 	if (!returned_value && declared_return_type!=VOID) fatal("Expected a return value!");
+	/* We can not EASILY check untyped return values without backtracking, so assume they are OK */
+	if (returned_value->value_type == VT_UNTYPED) {
+		return;
+	}
 	if (declared_return_type == INT) {
 		if (returned_value->value_type != VT_INTEGR) {
 			fatal("Expected integer return value");	
@@ -39,6 +43,10 @@ void type_check_return(value *returned_value, int declared_return_type) {
 /* Check that a variable with value: variable_value matches up with the declared type */
 void type_check_assignment(value *variable_name, value *variable_value, int declared_type) {
 	if (!variable_name || !variable_value) fatal("Not enough information to typecheck statement!");
+	/* We can not EASILY check untyped values without backtracking, so assume they are OK */
+	if (variable_value->value_type == VT_UNTYPED) {
+		return;
+	}
 	/* VOID variables can never be assigned to! */
 	if (declared_type == VOID) {
 		fatal("Variable '%s' of type \"void\" can not be assigned a value", to_string(variable_name));	

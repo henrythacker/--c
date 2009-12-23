@@ -9,6 +9,10 @@ value *generate_temporary(environment *env, value *null_value) {
 	return register_temporary(env, tmp, null_value);
 }
 
+value *generate_untypechecked_temporary(environment *env) {
+	return generate_temporary(env, untyped_value());
+}
+
 /* Add TAC quad onto end of generated code */
 void append_code(tac_quad *quad) {
 	if (tac_output == NULL) {
@@ -357,6 +361,7 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			/* val1 is FN definition */
 			/* val1 is executed in current environment */
 			val1 = make_simple(env, node->left, flag, return_type);
+			
 			/* If this is an embedded function, generate a goto to the end of the fn def */
 			/* Otherwise, we will inadvertendly attempt to execute the inner fn */
 			s_tmp = malloc(sizeof(char) * (strlen(val1->identifier) + 2));
@@ -430,7 +435,13 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			/* Lookup function */
 			temp = search(env, to_string(val1), VT_FUNCTN, VT_ANY, 1);
 			if (temp) {
-				int fn_return_type = temp->data.func->return_type;
+				/* If we can't typecheck, set a special UNDEFINED flag to say we can't */
+				/* typecheck. This can happen with function variables, we do not EASILY know the */
+				/* return type of the functions they are bound to until runtime. */
+				int fn_return_type = UNDEFINED;
+				if (temp->data.func) {
+					fn_return_type = temp->data.func->return_type;	
+				} 
 				/* Temporary for result (if any) */
 				switch(fn_return_type) {
 					case INT:
@@ -442,9 +453,9 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 					case FUNCTION:
 						temporary = generate_temporary(env, null_fn);
 						break;
-					default:
-						fatal("Unknown Return Type %d", fn_return_type);
-						return NULL;
+					case UNDEFINED:
+						temporary = generate_untypechecked_temporary(env);
+						break;
 				}
 				append_code(make_fn_call(temporary, val1));
 			}

@@ -12,7 +12,7 @@
 /* Assign data to identifier in env */
 value *assign(environment *env, value *identifier, value *data, int is_declarator) {
 	if (env==NULL || identifier==NULL) return;
-	return store(env, data->value_type, to_string(identifier), data, 0, is_declarator, 0);
+	return store(env, data->value_type, to_string(identifier), data, 0, is_declarator, 0, 0);
 }
 
 /* Count number of parameters */

@@ -27,6 +27,9 @@
 /* Any type - special type used in searches */
 #define VT_ANY INT_MIN + 6
 
+/* Temporary that cannot be EASILY type-checked at runtime */
+#define VT_UNTYPED INT_MIN + 7
+
 /* Special value which stores last if evaluation in environment */
 #define IF_EVAL_SYMBOL "$IF"
 #define CONTINUE_EVAL_SYMBOL "$CONTINUE"

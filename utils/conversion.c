@@ -80,6 +80,19 @@ value *int_value(int val) {
 	return tmp_value;
 }
 
+
+/* Make an int value out of an int */
+value *untyped_value() {
+	static int t_count = 0;
+	value *tmp_value = calloc(1, sizeof(value));
+	char temporary_name[10];
+	sprintf(temporary_name, "ut%d", t_count);
+	tmp_value->identifier = temporary_name;
+	tmp_value->value_type = VT_UNTYPED;
+	t_count++;
+	return tmp_value;
+}
+
 /* Make an int param out of an int and an identifier */
 value *int_param(char *identifier, int val) {
 	value *tmp_value = calloc(1, sizeof(value));
