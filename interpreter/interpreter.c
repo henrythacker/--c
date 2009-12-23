@@ -10,9 +10,9 @@
 
 /* Assign variable */
 /* Assign data to identifier in env */
-void assign(environment *env, value *identifier, value *data, int is_declarator) {
+value *assign(environment *env, value *identifier, value *data, int is_declarator) {
 	if (env==NULL || identifier==NULL) return;
-	store(env, data->value_type, to_string(identifier), data, 0, is_declarator, 0);
+	return store(env, data->value_type, to_string(identifier), data, 0, is_declarator, 0);
 }
 
 /* Count number of parameters */

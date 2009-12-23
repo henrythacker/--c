@@ -8,6 +8,9 @@
 #define TT_ASSIGN 154
 #define TT_RETURN 155
 #define TT_KEYWORD 156
+#define TT_FN_DEF 157
+#define TT_POP_PARAM 158
+#define TT_PUSH_PARAM 159
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,6 +40,8 @@ typedef struct simple {
 	char *label;
 	struct tac_quad *code;
 }simple;
+
+value *null_fn;
 
 tac_quad *tac_output;
 

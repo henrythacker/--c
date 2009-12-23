@@ -71,7 +71,7 @@ value *last_if_evaluation(environment *);
 void define_parameters(environment *, value *, value *, environment *);
 value *store(environment *, int, char *, value *, int, int, int);
 value *search(environment *, char *, int, int, int);
-void store_function(environment *, value *);
+value *store_function(environment *, value *);
 int environment_hash(char *);
 
 #endif

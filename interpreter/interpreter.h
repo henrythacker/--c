@@ -31,5 +31,7 @@ int param_count(value *);
 char *to_string(value *);
 value *evaluate(environment *, NODE *, int, int);
 value *build_function(environment *, value *, value *);
+value *assign(environment *, value *, value *, int);
+value *build_null_function();
 
 #endif

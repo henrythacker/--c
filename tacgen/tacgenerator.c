@@ -31,6 +31,12 @@ void print_tac(tac_quad *quad) {
 		case TT_LABEL:
 			printf("%s:\n", to_string(quad->operand1));
 			break;
+		case TT_FN_DEF:
+			printf("_%s:\n", to_string(quad->operand1));
+			break;	
+		case TT_POP_PARAM:
+			printf("PopParam %s\n", quad->operand1->identifier);
+			break;
 		case TT_IF:
 			printf("if %s goto %s\n", correct_string_rep(quad->operand1), correct_string_rep(quad->result));
 			break;			
@@ -130,6 +136,10 @@ tac_quad *make_keyword(char *keyword) {
 	return make_quad_value("", string_value(keyword), NULL, NULL, TT_KEYWORD);
 }
 
+/* Generate FN Definition label */
+tac_quad *make_fn_def(value *fn_def) {
+	return make_quad_value("", string_value(fn_def->identifier), NULL, NULL, TT_FN_DEF);
+}
 
 /* Build necessary code for an if statement */
 void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *end_jump, int flag, int return_type) {
@@ -205,6 +215,31 @@ void build_while_stmt(environment *env, NODE *node, int while_count, int if_coun
 	sprintf(s_tmp, "$while%dend", while_count);
 	append_code(make_label(s_tmp));
 	
+}
+
+/* Register params in environment */
+void register_params(environment *env, value *param_list) {
+	if (!param_list) return;
+	value *current_param = param_list;
+	while (current_param!=NULL) {
+		value *param = NULL;
+		value *param_name = string_value(current_param->identifier);
+		switch(current_param->value_type) {	
+			case VT_INTEGR:
+				param = assign(env, param_name, int_value(0), 1);
+				break;
+			case VT_VOID:	
+				param = assign(env, param_name, void_value(), 1);						
+				break;
+			case VT_FUNCTN:
+				param = assign(env, param_name, null_fn, 1);
+				break;
+			default:
+				fatal("Could not determine parameter type!");
+		}
+		append_code(make_quad_value("", param, NULL, NULL, TT_POP_PARAM));
+		current_param = current_param->next;
+	}
 }
 
 /* 
@@ -283,7 +318,10 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			append_code(make_quad_value(type_to_string(type_of(node)), val1, val2, temporary, TT_OP));
 			return temporary;
 		case '~':
-			register_variable_subtree(env, node, VT_ANY);
+			if (flag != INTERPRET_PARAMS) {
+				/* Params should not be registered, because at this point we're not in the correct environment */
+				register_variable_subtree(env, node, VT_ANY);
+			}
 			val1 = make_simple(env, node->left, flag, return_type);
 			val2 = make_simple(env, node->right, flag, return_type);
 			if (flag == INTERPRET_PARAMS) {
@@ -298,12 +336,14 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 				/* Point function to the correct fn body */
 				val1->data.func->node_value = node->right;
 				/* Store function definition in environment */
-				store_function(env, val1);
+				val2 = store_function(env, val1);
 			}
 			/* Write out FN Name label */
-			append_code(make_label(val1->identifier));
+			append_code(make_fn_def(val2));
 			/* Look inside body, but in new environment */
 			new_env = create_environment(env);
+			/* Define parameters with default empty values */
+			register_params(new_env, val2->data.func->params);
 			val2 = make_simple(new_env, node->right, flag, return_type);
 			/* Write end of function marker */
 			append_code(make_keyword("EndFn"));
@@ -343,6 +383,7 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 
 /* Start the TAC generator process at the top of the AST */
 void start_tac_gen(NODE *tree) {
+	null_fn = build_null_function();
 	environment *default_env = create_environment(NULL);
 	make_simple(default_env, tree, 0, 0);
 	print_tac(tac_output);
