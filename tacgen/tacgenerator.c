@@ -291,42 +291,26 @@ void declare_variables_tac(environment *env, NODE *node, int variable_type, int 
 	}
 	else if (type_of(node) == '=') { /* Specific assignment */
 		variable_name = make_simple(env, node->left, 0, return_type);
-		//variable_value = evaluate(env, node->right, 0, return_type);		
 	}
 	else if (type_of(node) == LEAF) { /* Undefined assignment */
 		variable_name = make_simple(env, node->left, 0, return_type);		
 	}
 	/* Assign variable */
-	if (variable_name) {
-		if (variable_value) {
-			/* If variable_value is a string, we need to do a fn/variable lookup */
-			if (variable_value->value_type == VT_STRING) {
-				value *old_name = variable_value;
-				variable_value = get(env, to_string(variable_value));
-				if (!variable_value) {
-					fatal("Could not find identifier '%s'", to_string(old_name));
-				}
-			}
-			/* We have to assign the specified initial value, AFTER typechecking */
-			type_check_assignment(variable_name, variable_value, variable_type);
-			assign(env, variable_name, variable_value, 1);
-		}
-		else {
-			/* Assign a default initialization value for this type */
-			switch(variable_type) {	
-				case INT:
-					printf("1\n");
-					assign(env, variable_name, int_value(0), 1);
-					break;
-				case VOID:	
-					printf("2\n");				
-					assign(env, variable_name, void_value(), 1);						
-					break;
-				case FUNCTION:
-					printf("3\n");								
-					assign(env, variable_name, null_fn, 1);
-					break;
-			}
+	if (variable_name) {		
+		/* Assign a default initialization value for this type */
+		switch(variable_type) {	
+			case INT:
+				printf("1\n");
+				assign(env, variable_name, int_value(0), 1);
+				break;
+			case VOID:	
+				printf("2\n");				
+				assign(env, variable_name, void_value(), 1);						
+				break;
+			case FUNCTION:
+				printf("3\n");								
+				assign(env, variable_name, null_fn, 1);
+				break;
 		}
 	}
 	else {
