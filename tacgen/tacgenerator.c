@@ -280,7 +280,6 @@ tac_quad *push_params(value *params_head) {
 /* Declare variables underneath a declarator tree */
 void declare_variables_tac(environment *env, NODE *node, int variable_type, int return_type) {
 	value *variable_name = NULL;
-	value *variable_value = NULL;
 	if (env == NULL || node == NULL) {
 		return;
 	}
