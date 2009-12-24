@@ -84,7 +84,7 @@ value *build_function(environment *env, value *fn_name, value *param_list) {
 	char *identifier = to_string(fn_name);
 	function_declaration *fn_value = calloc(1, sizeof(function_declaration));	
 	tmp_value->value_type = VT_FUNCTN;
-	tmp_value->identifier = malloc((sizeof(char) * strlen(identifier)) + 1);
+	tmp_value->identifier = malloc(sizeof(char) * (strlen(identifier) + 1));
 	strcpy(tmp_value->identifier, identifier);
 	fn_value->params = param_list;
 	fn_value->definition_env = env;
