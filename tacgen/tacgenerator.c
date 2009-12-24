@@ -285,7 +285,7 @@ void declare_variables_tac(environment *env, NODE *node, int variable_type, int 
 	}
 	else if (type_of(node) == '=') { /* Specific assignment */
 		variable_name = make_simple(env, node->left, 0, return_type);
-		variable_value = evaluate(env, node->right, 0, return_type);		
+		//variable_value = evaluate(env, node->right, 0, return_type);		
 	}
 	else if (type_of(node) == LEAF) { /* Undefined assignment */
 		variable_name = make_simple(env, node->left, 0, return_type);		
@@ -309,12 +309,15 @@ void declare_variables_tac(environment *env, NODE *node, int variable_type, int 
 			/* Assign a default initialization value for this type */
 			switch(variable_type) {	
 				case INT:
+					printf("1\n");
 					assign(env, variable_name, int_value(0), 1);
 					break;
 				case VOID:	
+					printf("2\n");				
 					assign(env, variable_name, void_value(), 1);						
 					break;
 				case FUNCTION:
+					printf("3\n");								
 					assign(env, variable_name, null_fn, 1);
 					break;
 			}
@@ -528,13 +531,17 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 					case FUNCTION:
 						temporary = generate_temporary(env, null_fn);
 						break;
-					case UNDEFINED:
+					default:
 						temporary = generate_untypechecked_temporary(env);
 						break;
 				}
 				append_code(make_fn_call(temporary, val1));
+				return temporary;
 			}
-			return temporary;
+			else {
+				fatal("Cannot find function '%s'", to_string(val1));
+			}
+			return NULL;
 		case FUNCTION:
 		case INT:
 		case VOID:
