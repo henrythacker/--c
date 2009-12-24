@@ -162,7 +162,7 @@ tac_quad *make_fn_call(value *result, value *fn_def) {
 }
 
 /* Build necessary code for an if statement */
-void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *end_jump, int flag, int return_type) {
+void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *false_jump, tac_quad *loop_jump, int flag, int return_type) {
 	char *s_tmp;
 	value *val1, *val2, *temporary;
 	if (node==NULL || (type_of(node)!=IF && type_of(node)!=WHILE)) return;
@@ -181,9 +181,14 @@ void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *end_jum
 	}
 	
 	/* Generate goto end of if statement */
-	s_tmp = malloc(sizeof(char) * 25);
-	sprintf(s_tmp, "$if%dend", if_count);
-	append_code(make_goto(s_tmp));
+	if (false_jump != NULL) {
+		append_code(false_jump);
+	}
+	else {
+		s_tmp = malloc(sizeof(char) * 25);
+		sprintf(s_tmp, "$if%dend", if_count);
+		append_code(make_goto(s_tmp));
+	}
 	
 	/* Generate label for start of true branch */
 	s_tmp = malloc(sizeof(char) * 25);
@@ -201,8 +206,8 @@ void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *end_jum
 	}
 	
 	/* Check if extra loop jump has been specified (for WHILE loops etc) */
-	if (end_jump) {
-		append_code(end_jump);
+	if (loop_jump) {
+		append_code(loop_jump);
 	}
 	
 	/* Generate end of IF stmt label */
@@ -226,13 +231,14 @@ void build_while_stmt(environment *env, NODE *node, int while_count, int if_coun
 	s_tmp = malloc(sizeof(char) * 25);
 	sprintf(s_tmp, "$while%d", while_count);
 	loop_jmp = make_goto(s_tmp);
-	
-	/* Build IF stmt for condition */
-	build_if_stmt(env, node, if_count, loop_jmp, flag, return_type);
-	
+
 	/* End while loop stmt */
 	s_tmp = malloc(sizeof(char) * 25);
 	sprintf(s_tmp, "$while%dend", while_count);
+	
+	/* Build IF stmt for condition */
+	build_if_stmt(env, node, if_count, make_goto(s_tmp), loop_jmp, flag, return_type);
+	
 	append_code(make_label(s_tmp));
 	
 }
@@ -368,17 +374,17 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 		case IDENTIFIER:
 			return string_value(cast_from_node(node)->lexeme);
 		case IF:
-			build_if_stmt(env, node, ++if_count, NULL, flag, return_type);
+			build_if_stmt(env, node, ++if_count, NULL, NULL, flag, return_type);
 			return NULL;
 		case BREAK:
 			s_tmp = malloc(sizeof(char) * 25);
 			sprintf(s_tmp, "$while%dend", while_count);
-			append_code(make_label(s_tmp));
+			append_code(make_goto(s_tmp));
 			return NULL;			
 		case CONTINUE:
 			s_tmp = malloc(sizeof(char) * 25);
 			sprintf(s_tmp, "$while%d", while_count);
-			append_code(make_label(s_tmp));
+			append_code(make_goto(s_tmp));
 			return NULL;
 		case WHILE:
 			new_env = create_environment(env);
