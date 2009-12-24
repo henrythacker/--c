@@ -161,7 +161,8 @@ value *store_function(environment *env, value *func) {
 value *store(environment *env, int value_type, char *identifier, value *val, int is_param, int is_declarator, int is_fn_dec, int is_temporary) {
 	value *new_value;
 	/* Check entry will be valid */
-	if (!identifier || !val || val->value_type==VT_STRING) return NULL;
+	if (!identifier || (!val && value_type!=VT_VOID)) return NULL;
+	if (val && val->value_type==VT_STRING) return NULL;
 	/* Find out what position in the hashtable the value should be stored in */
 	int hash_position = environment_hash(identifier);
 	/* The environment must be valid */
