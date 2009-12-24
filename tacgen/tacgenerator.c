@@ -13,21 +13,6 @@ value *generate_untypechecked_temporary(environment *env) {
 	return generate_temporary(env, untyped_value());
 }
 
-/* Add TAC quad onto end of generated code */
-void append_code(tac_quad *quad) {
-	if (tac_output == NULL) {
-		tac_output = quad;
-	}
-	else {
-		tac_quad *tmp = tac_output;
-		while(1) {
-			if (tmp->next==NULL) break;
-			tmp = tmp->next;
-		}
-		tmp->next = quad;
-	}
-}
-
 /* TAC to stdout */
 void print_tac(tac_quad *quad) {
 	if (quad==NULL) return;
@@ -77,6 +62,21 @@ void print_tac(tac_quad *quad) {
 			fatal("Unknown TAC Quad type '%d'", quad->type);
 	}
 	print_tac(quad->next);
+}
+
+/* Add TAC quad onto end of generated code */
+void append_code(tac_quad *quad) {
+	if (tac_output == NULL) {
+		tac_output = quad;
+	}
+	else {
+		tac_quad *tmp = tac_output;
+		while(1) {
+			if (tmp->next==NULL) break;
+			tmp = tmp->next;
+		}
+		tmp->next = quad;
+	}
 }
 
 /* Make a TAC quad */
@@ -299,7 +299,7 @@ void declare_variables_tac(environment *env, NODE *node, int variable_type, int 
 				assign(env, variable_name, void_value(), 1);						
 				break;
 			case FUNCTION:
-				assign(env, variable_name, null_function, 1);
+				assign(env, variable_name, null_fn, 1);
 				break;
 		}
 	}
