@@ -168,10 +168,11 @@ value *store(environment *env, int value_type, char *identifier, value *val, int
 	if (!env) return NULL;
 	/* Check for redefinition */
 	if (!is_fn_dec && !is_declarator && value_type!=VT_FUNCTN && !is_param) {
+		if (value_type==VT_UNTYPED) value_type = VT_ANY;
 		/* Value already exists - overwrite */
 		new_value = search(env, identifier, value_type, VT_ANY, 1);
 		if (!new_value) {
-			fatal("Could not find identifier '%s'", identifier);
+			fatal("Could not find identifier '%s' with type %d", identifier);
 		}
 	}
 	else if (is_fn_dec && value_type==VT_FUNCTN && search(env, identifier, value_type, VT_ANY, 1) && !is_param) {

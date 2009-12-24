@@ -77,6 +77,7 @@ void append_code(tac_quad *quad) {
 		}
 		tmp->next = quad;
 	}
+	print_tac(quad);
 }
 
 /* Make a TAC quad */
