@@ -21,7 +21,7 @@ void print_tac(tac_quad *quad) {
 			printf("%s:\n", to_string(quad->operand1));
 			break;
 		case TT_FN_DEF:
-			printf("_%s:\nBeginFn %d\n", to_string(quad->operand1), param_count(quad->operand1));
+			printf("_%s:\n", to_string(quad->operand1));
 			break;	
 		case TT_FN_CALL:
 			printf("%s = CallFn _%s\n", correct_string_rep(quad->result), to_string(quad->operand1));
@@ -274,6 +274,7 @@ tac_quad *push_params(value *params_head) {
 /* Declare variables underneath a declarator tree */
 void declare_variables_tac(environment *env, NODE *node, int variable_type, int return_type) {
 	value *variable_name = NULL;
+	value *variable_value = NULL;
 	if (env == NULL || node == NULL) {
 		return;
 	}
@@ -284,23 +285,39 @@ void declare_variables_tac(environment *env, NODE *node, int variable_type, int 
 	}
 	else if (type_of(node) == '=') { /* Specific assignment */
 		variable_name = make_simple(env, node->left, 0, return_type);
+		variable_value = evaluate(env, node->right, 0, return_type);		
 	}
 	else if (type_of(node) == LEAF) { /* Undefined assignment */
 		variable_name = make_simple(env, node->left, 0, return_type);		
 	}
 	/* Assign variable */
 	if (variable_name) {
-		/* Assign a default initialization value for this type */
-		switch(variable_type) {	
-			case INT:
-				assign(env, variable_name, int_value(0), 1);
-				break;
-			case VOID:	
-				assign(env, variable_name, void_value(), 1);						
-				break;
-			case FUNCTION:
-				assign(env, variable_name, null_fn, 1);
-				break;
+		if (variable_value) {
+			/* If variable_value is a string, we need to do a fn/variable lookup */
+			if (variable_value->value_type == VT_STRING) {
+				value *old_name = variable_value;
+				variable_value = get(env, to_string(variable_value));
+				if (!variable_value) {
+					fatal("Could not find identifier '%s'", to_string(old_name));
+				}
+			}
+			/* We have to assign the specified initial value, AFTER typechecking */
+			type_check_assignment(variable_name, variable_value, variable_type);
+			assign(env, variable_name, variable_value, 1);
+		}
+		else {
+			/* Assign a default initialization value for this type */
+			switch(variable_type) {	
+				case INT:
+					assign(env, variable_name, int_value(0), 1);
+					break;
+				case VOID:	
+					assign(env, variable_name, void_value(), 1);						
+					break;
+				case FUNCTION:
+					assign(env, variable_name, null_fn, 1);
+					break;
+			}
 		}
 	}
 	else {
@@ -433,6 +450,7 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			if (flag != INTERPRET_FN_SCAN) {
 				/* Write out FN Name label */
 				append_code(make_fn_def(val2));
+				append_code(make_begin_fn(val2));				
 				/* Look inside body, but in new environment */
 				new_env = create_environment(env);
 				/* Define parameters with default empty values */
