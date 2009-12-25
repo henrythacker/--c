@@ -1,6 +1,7 @@
 #ifndef __MIPS_H
 #define __MIPS_H
 
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
