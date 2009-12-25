@@ -5,6 +5,7 @@
 #include <string.h>
 #include "interpreter.h"
 #include "tacgenerator.h"
+#include "mips.h"
 
 #define MODE_PARSE 0
 #define MODE_TAC_GEN 1
@@ -126,14 +127,15 @@ void process(NODE *tree, int run_mode)
 		case(MODE_PARSE):
 			printf("\nparse finished with %p\n", tree);
 	    	print_tree(tree);
-			return;
+			break;
 		case(MODE_INTERPRET):
 			start_interpret(tree);
 			break;
 		case(MODE_TAC_GEN):
 			start_tac_gen(tree);
 			break;
-		case(MODE_MIPS):	
+		case(MODE_MIPS):
+			code_gen(tree);
 			break;
 		default:
 			return;
