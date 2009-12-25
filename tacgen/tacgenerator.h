@@ -27,8 +27,9 @@
 #include "token.h"
 
 /* Fn prototypes */
-void start_tac_gen(NODE *);
+struct tac_quad *start_tac_gen(NODE *);
 value *make_simple(environment *, NODE *, int, int);
+void print_tac(struct tac_quad *);
 
 /* TAC structure */
 typedef struct tac_quad {

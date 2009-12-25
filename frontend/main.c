@@ -132,7 +132,7 @@ void process(NODE *tree, int run_mode)
 			start_interpret(tree);
 			break;
 		case(MODE_TAC_GEN):
-			start_tac_gen(tree);
+			print_tac(start_tac_gen(tree));
 			break;
 		case(MODE_MIPS):
 			code_gen(tree);

@@ -547,12 +547,12 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 
 
 /* Start the TAC generator process at the top of the AST */
-void start_tac_gen(NODE *tree) {
+tac_quad *start_tac_gen(NODE *tree) {
 	null_fn = build_null_function();
 	/* Do a scan for function definitions first */
 	environment *initial_env = create_environment(NULL);
 	make_simple(initial_env, tree, INTERPRET_FN_SCAN, INT);
 	/* Actually generate the TAC */
 	make_simple(initial_env, tree, 0, 0);
-	print_tac(tac_output);
+	return tac_output;
 }
