@@ -86,24 +86,24 @@ char *return_type_as_string(int type) {
 void debug_print_value(value *val) {
 	if (DEBUG_ON && val) {
 		if (val->temporary) {
-			printf("\ttemporary - identifier: %s\n", val->identifier);
+			printf("\ttemporary - identifier: %s - var_number: %d\n", val->identifier, val->variable_number);
 		}
 		else {
 			switch(val->value_type) {
 				case VT_VOID:
-					printf("\tvoid - identifier: %s\n", val->identifier);
+					printf("\tvoid - identifier: %s - var_number: %d\n", val->identifier, val->variable_number);
 					break;
 				case VT_INTEGR:
-					printf("\tint - identifier: %s, value: %d\n", val->identifier, val->data.int_value);
+					printf("\tint - identifier: %s, value: %d - var_number: %d\n", val->identifier, val->data.int_value, val->variable_number);
 					break;
 				case VT_STRING:	
 					/* A string should never be stored in the hashtable - this language doesn't have strings */
 					break;			
 				case VT_FUNCTN:			
-					printf("\tfunc - identifier: %s, entry-point: %p, returns: %s, definition-env: %p, params: %d\n", val->identifier, val->data.func->node_value, return_type_as_string(val->data.func->return_type), val->data.func->definition_env, param_count(val));			
+					printf("\tfunc - identifier: %s, entry-point: %p, returns: %s, definition-env: %p, params: %d\n - var_number: %d\n", val->identifier, val->data.func->node_value, return_type_as_string(val->data.func->return_type), val->data.func->definition_env, param_count(val), val->variable_number);			
 					break;			
-				case VT_LINKED:						
-					break;			
+				case VT_LINKED:		
+					break;
 			}
 		}
 		debug_print_value(val->next);
@@ -203,7 +203,10 @@ value *store(environment *env, int value_type, char *identifier, value *val, int
 		new_value->next = NULL;
 		new_value->value_type = value_type;
 		new_value->temporary = is_temporary;
-		new_value->variable_number = env->env_size;
+		if (is_declarator) {
+			new_value->variable_number = env->env_size;
+			env->env_size = env->env_size + 1;
+		}
 		/* Do we have any values in this position of the array? */
 		if (!env->values[hash_position]) {
 			/* Nothing exists here yet */
@@ -235,7 +238,6 @@ value *store(environment *env, int value_type, char *identifier, value *val, int
 			/* No value */
 			break;
 	}
-	env->env_size++;
 	debug_environment(env);
 	return new_value;
 }

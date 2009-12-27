@@ -396,8 +396,8 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			assert(temp!=NULL, "Variable not defined");
 			/* Type check the assignment */
 			type_check_assignment(val1, val2, vt_type_convert(temp->value_type));
-			assign(env, val1, val2, 0);
-			if (flag != INTERPRET_FN_SCAN) append_code(make_quad_value("=", val2, NULL, val1, TT_ASSIGN));
+			temporary = assign(env, val1, val2, 0);
+			if (flag != INTERPRET_FN_SCAN) append_code(make_quad_value("=", val2, NULL, temporary, TT_ASSIGN));
 			return NULL;
 		case '*':
 		case '/':

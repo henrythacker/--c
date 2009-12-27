@@ -72,6 +72,7 @@ environment *create_environment(environment *);
 value *find_leaf_value(value *);
 value *get(environment *, char *);
 extern value *string_value(char *);
+void debug_print_value(value *);
 value *last_if_evaluation(environment *);
 void define_parameters(environment *, value *, value *, environment *);
 value *store(environment *, int, char *, value *, int, int, int, int);

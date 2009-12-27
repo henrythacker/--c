@@ -36,7 +36,7 @@ void write_code(tac_quad *quad) {
 			printf("%s:\n", correct_string_rep(quad->operand1));
 			break;
 		case TT_ASSIGN:
-			printf("\t ###### Result - variable number: %d\n", quad->result->variable_number);
+			printf("\t###### Result - variable number: %d - %s\n", quad->result->variable_number, correct_string_rep(quad->result));
 			break;
 		case TT_PUSH_PARAM:
 			printf("\tsw $a%d, -%d($sp) # Push param\n", param_number, (param_number + 1) * 4);
@@ -54,7 +54,7 @@ void write_code(tac_quad *quad) {
 			break;
 		case TT_RETURN:
 			/* Save the return value */
-			printf("\tli $v0, %s\n", correct_string_rep(quad->operand1));
+			if (quad->operand1)	printf("\tli $v0, %s\n", correct_string_rep(quad->operand1));
 			/* Restore the activation record */
 			printf("\tmove $sp, $fp # Restore $sp, so we can index previous $ra, $fp\n");
 			printf("\tlw $ra, 4($sp) # Restore previous $ra\n");
