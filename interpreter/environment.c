@@ -16,6 +16,7 @@ environment *create_environment(environment *static_link) {
 	new_environment->values = (value **) calloc(HASH_VALUE_SIZE, sizeof(value *));
 	/* Assign static link ptr */
 	new_environment->static_link = static_link;
+	new_environment->env_size = 0;
 	return new_environment;
 }
 
@@ -150,10 +151,11 @@ void debug_environment(environment *env) {
 }
 
 /* Wrapper to store a function in the environment */
-value *store_function(environment *env, value *func) {
+value *store_function(environment *env, value *func, environment *local_env) {
 	/* Check we were passed valid data */
 	if (!env || !func) return;
 	if (func->value_type!=VT_FUNCTN) return;
+	func->data.func->local_env = local_env;
 	return store(env, VT_FUNCTN, func->identifier, func, 0, 1, 1, 0);
 }
 
@@ -201,6 +203,7 @@ value *store(environment *env, int value_type, char *identifier, value *val, int
 		new_value->next = NULL;
 		new_value->value_type = value_type;
 		new_value->temporary = is_temporary;
+		new_value->variable_number = env->env_size;
 		/* Do we have any values in this position of the array? */
 		if (!env->values[hash_position]) {
 			/* Nothing exists here yet */
@@ -220,6 +223,7 @@ value *store(environment *env, int value_type, char *identifier, value *val, int
 			/* No value */
 			break;
 	}
+	env->env_size++;
 	debug_environment(env);
 	return new_value;
 }

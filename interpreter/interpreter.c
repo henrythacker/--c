@@ -282,7 +282,7 @@ value *evaluate(environment *env, NODE *node, int flag, int return_type) {
 				/* Point function to the correct fn body */
  				lhs->data.func->node_value = node->right;
 				/* Store function definition in environment */
-				store_function(env, lhs);
+				store_function(env, lhs, NULL);
 			}
 			return NULL;
 		case 'd':

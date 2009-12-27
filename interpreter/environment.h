@@ -41,6 +41,7 @@ typedef struct value {
 	struct value *next;
 	int value_type;
 	int temporary;
+	int variable_number;
 	union {
 		char *string_value;
 		int int_value;
@@ -51,6 +52,7 @@ typedef struct value {
 
 /* Environment structure */
 typedef struct environment {
+	int env_size;
 	struct value **values;
 	struct environment *static_link;
 } environment;
@@ -60,10 +62,12 @@ typedef struct function_declaration {
 	int return_type;
 	struct value *params;
 	struct environment *definition_env;
+	struct environment *local_env;	
 	NODE *node_value; /* Function entry point */
 } function_declaration;
 
 /* Fn prototypes */
+int env_size(environment *env);
 environment *create_environment(environment *);
 value *find_leaf_value(value *);
 value *get(environment *, char *);
@@ -72,7 +76,7 @@ value *last_if_evaluation(environment *);
 void define_parameters(environment *, value *, value *, environment *);
 value *store(environment *, int, char *, value *, int, int, int, int);
 value *search(environment *, char *, int, int, int);
-value *store_function(environment *, value *);
+value *store_function(environment *, value *, environment *);
 int environment_hash(char *);
 
 #endif

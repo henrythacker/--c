@@ -52,6 +52,9 @@ void print_tac(tac_quad *quad) {
 				printf("Return");
 			}
 			break;
+		case TT_PREPARE:
+			printf("Prepare %d\n", param_count(quad->operand1));
+			break;	
 		case TT_BEGIN_FN:
 			printf("BeginFn %d\n", param_count(quad->operand1));
 			break;
@@ -119,6 +122,11 @@ void build_else_part(environment *env, NODE *node, int true_part, int flag, int 
 	else {
 		make_simple(env, node->right, flag, return_type);		
 	}
+}
+
+/* Generate jump label with given name */
+tac_quad *prepare_fn(value *func) {
+	return make_quad_value("", func, NULL, NULL, TT_PREPARE);
 }
 
 /* Generate jump label with given name */
@@ -299,15 +307,12 @@ void declare_variables_tac(environment *env, NODE *node, int variable_type, int 
 		/* Assign a default initialization value for this type */
 		switch(variable_type) {	
 			case INT:
-				printf("1\n");
 				assign(env, variable_name, int_value(0), 1);
 				break;
 			case VOID:	
-				printf("2\n");				
 				assign(env, variable_name, void_value(), 1);						
 				break;
 			case FUNCTION:
-				printf("3\n");								
 				assign(env, variable_name, null_fn, 1);
 				break;
 		}
@@ -433,18 +438,18 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			if (flag == EMBEDDED_FNS) {
 				append_code(make_goto(s_tmp));
 			}
+			/* New FN body environment */
+			new_env = create_environment(env);
 			if (val1!=NULL) {
 				/* Point function to the correct fn body */
-				val1->data.func->node_value = node->right;
+				val1->data.func->node_value = node->right;			
 				/* Store function definition in environment */
-				val2 = store_function(env, val1);
+				val2 = store_function(env, val1, new_env);
 			}
 			if (flag != INTERPRET_FN_SCAN) {
 				/* Write out FN Name label */
 				append_code(make_fn_def(val2));
 				append_code(make_begin_fn(val2));				
-				/* Look inside body, but in new environment */
-				new_env = create_environment(env);
 				/* Define parameters with default empty values */
 				register_params(new_env, val2->data.func->params);
 				/* Look inside fn body */
@@ -498,10 +503,11 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			val1 = make_simple(env, node->left, flag, return_type);
 			/* Params */
 			val2 = make_simple(env, node->right, flag, return_type);
-			append_code(push_params(val2));
 			/* Lookup function */
 			temp = search(env, to_string(val1), VT_FUNCTN, VT_ANY, 1);
 			if (temp) {
+				append_code(prepare_fn(val2));
+				append_code(push_params(val2));
 				/* If we can't typecheck, set a special UNDEFINED flag to say we can't */
 				/* typecheck. This can happen with function variables, we do not EASILY know the */
 				/* return type of the functions they are bound to until runtime. */
