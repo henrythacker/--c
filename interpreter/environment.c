@@ -209,6 +209,18 @@ value *store(environment *env, int value_type, char *identifier, value *val, int
 			/* Nothing exists here yet */
 			env->values[hash_position] = new_value;
 		}
+		else {
+			/* Value already in this hash position, append to the end */
+			value *current_val = env->values[hash_position];
+			if (!current_val) fatal("Could not access current value in hash position %d", hash_position);
+			for (;;) {
+				if (current_val->next==NULL) {
+					break;
+				}
+				current_val = current_val->next;
+			}
+			current_val->next = new_value;
+		}
 	}
 	/* Assign correct value */
 	switch(value_type) {

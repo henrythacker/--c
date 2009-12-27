@@ -35,6 +35,9 @@ void write_code(tac_quad *quad) {
 		case TT_LABEL:
 			printf("%s:\n", correct_string_rep(quad->operand1));
 			break;
+		case TT_ASSIGN:
+			printf("\t ###### Result - variable number: %d\n", quad->result->variable_number);
+			break;
 		case TT_PUSH_PARAM:
 			printf("\tsw $a%d, -%d($sp) # Push param\n", param_number, (param_number + 1) * 4);
 			param_number++;
