@@ -17,6 +17,41 @@ int local_size(value *fn_def) {
 	return env->env_size;
 }
 
+int is_intermediate(value *var) {
+	return var->temporary && var->value_type == VT_INTEGR;
+}
+
+char *load_variable(value *var) {
+	char *s_tmp = (char *)malloc(sizeof(char) * 20);
+	if (!var) return "";
+	int var_num = var->variable_number;
+	if (is_intermediate(var)) return var->identifier;
+	if (var_num > 6) {
+		/* Have to look up in stack, load and put into $t7 */
+		printf("\tlw $t7, %d($fp)\n", (var_num - 7) * 4);
+		return "$t7";
+	}
+	else {
+		/* Available in temporary */
+		sprintf(s_tmp, "$t%d", var_num);
+		return s_tmp;
+	}
+}
+
+void store_in(value *result, value *op1) {
+	if (!result || !op1) return;
+	int var_num = result->variable_number;
+	if (var_num > 6) {
+		/* Have to store in stack, put into $t7 */
+		printf("\tmove $t7, %s\n", load_variable(op1));
+		printf("\tsw $t7, %d($fp)\n", (var_num - 7) * 4);		
+	}
+	else {
+		/* Save directly in temporary */
+		printf("\tmove $t%d, %s\n", var_num, load_variable(op1));
+	}
+}
+
 /* Write out code */
 void write_code(tac_quad *quad) {
 	static int param_number = 0;
@@ -36,7 +71,7 @@ void write_code(tac_quad *quad) {
 			printf("%s:\n", correct_string_rep(quad->operand1));
 			break;
 		case TT_ASSIGN:
-			printf("\t###### Result - variable number: %d - %s\n", quad->result->variable_number, correct_string_rep(quad->result));
+			store_in(quad->result, quad->operand1);
 			break;
 		case TT_PUSH_PARAM:
 			printf("\tsw $a%d, -%d($sp) # Push param\n", param_number, (param_number + 1) * 4);
