@@ -42,6 +42,7 @@ typedef struct value {
 	int value_type;
 	int temporary;
 	int variable_number;
+	struct environment *stored_in_env;
 	union {
 		char *string_value;
 		int int_value;

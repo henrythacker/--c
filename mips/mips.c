@@ -17,39 +17,40 @@ int local_size(value *fn_def) {
 	return env->env_size;
 }
 
-int is_intermediate(value *var) {
-	return var->temporary && var->value_type == VT_INTEGR;
+/* Is the value a constant? */
+int is_constant(value *var) {
+	return var && !var->temporary && var->value_type == VT_INTEGR && var->identifier[0]=='_';
 }
 
-char *load_variable(value *var) {
-	char *s_tmp = (char *)malloc(sizeof(char) * 20);
-	if (!var) return "";
-	int var_num = var->variable_number;
-	if (is_intermediate(var)) return var->identifier;
-	if (var_num > 6) {
-		/* Have to look up in stack, load and put into $t7 */
-		printf("\tlw $t7, %d($fp)\n", (var_num - 7) * 4);
-		return "$t7";
+/* Get hold of variable */
+char *load_variable(environment *local_env, value *var) {
+	int static_link = 0;
+	int found = -1;
+	int links = 0;
+	environment *current_env = local_env;
+	while (current_env) {
+		if (var->stored_in_env == current_env) {
+			found = static_link;
+			break;
+		}
+		current_env = current_env->static_link;
+		static_link++;
+	}
+	if (found==-1) fatal("Could not load variable");
+	if (found==0) {
+		/* Already in current env, should be available more easily */
+		
 	}
 	else {
-		/* Available in temporary */
-		sprintf(s_tmp, "$t%d", var_num);
-		return s_tmp;
+		/* Follow $fp, found number of times */
+		for (links=0; links<found; links++) {
+		
+		}
 	}
 }
 
-void store_in(value *result, value *op1) {
-	if (!result || !op1) return;
-	int var_num = result->variable_number;
-	if (var_num > 6) {
-		/* Have to store in stack, put into $t7 */
-		printf("\tmove $t7, %s\n", load_variable(op1));
-		printf("\tsw $t7, %d($fp)\n", (var_num - 7) * 4);		
-	}
-	else {
-		/* Save directly in temporary */
-		printf("\tmove $t%d, %s\n", var_num, load_variable(op1));
-	}
+void cg_operation(int operation, value *op1, value *op2, value *result) {
+	
 }
 
 /* Write out code */
@@ -58,43 +59,29 @@ void write_code(tac_quad *quad) {
 	if (!quad) return;
 	switch(quad->type) {
 		case TT_FN_DEF:
-			printf("_%s:\n", correct_string_rep(quad->operand1));
 			break;
 		case TT_BEGIN_FN:
-			if (strcmp(correct_string_rep(quad->operand1), "main") == 0) entry_point = quad;
-			/* Set up activation record */
-			printf("\tsw $ra, 4($sp) # Save previous $ra on stack (offset 4)\n");
-			printf("\tsw $fp, 8($sp) # Save previous $fp on stack (offset 8)\n");
-			printf("\tmove $fp, $sp # $fp = $sp, so we can index arguments as offsets from $fp\n");
 			break;
 		case TT_LABEL:
-			printf("%s:\n", correct_string_rep(quad->operand1));
 			break;
 		case TT_ASSIGN:
-			store_in(quad->result, quad->operand1);
 			break;
 		case TT_PUSH_PARAM:
-			printf("\tsw $a%d, -%d($sp) # Push param\n", param_number, (param_number + 1) * 4);
-			param_number++;
+			printf("\tsub $sp, $sp, 4 # Reserve space for pushed parameter\n");
+			printf("\tsw $t, 0($sp) # Reserve space for pushed parameter\n");			
 			break;
 		case TT_PREPARE:
-			/* Assign enough space for the activation record */
-			printf("\tsub $sp, %d\n", ACTIVATION_RECORD_SIZE);
+			break;
+		case TT_OP:
+			cg_operation(quad->subtype, quad->operand1, quad->operand2, quad->result);
 			break;
 		case TT_FN_CALL:
 			// Reset param count
 			param_number = 0;
-			printf("\tjal _%s\n\tsw $v0, 0($fp)\n", correct_string_rep(quad->operand1));			
-			printf("\tadd $sp, %d # Move $sp back\n", ACTIVATION_RECORD_SIZE);
 			break;
 		case TT_RETURN:
 			/* Save the return value */
-			if (quad->operand1)	printf("\tli $v0, %s\n", correct_string_rep(quad->operand1));
 			/* Restore the activation record */
-			printf("\tmove $sp, $fp # Restore $sp, so we can index previous $ra, $fp\n");
-			printf("\tlw $ra, 4($sp) # Restore previous $ra\n");
-			printf("\tlw $fp, 8($sp) # Restore previous $fp\n");			
-			printf("\tjr $ra\n");
 			break;
 		default:
 			printf("", quad->type);

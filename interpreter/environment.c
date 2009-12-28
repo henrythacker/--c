@@ -203,6 +203,7 @@ value *store(environment *env, int value_type, char *identifier, value *val, int
 		new_value->next = NULL;
 		new_value->value_type = value_type;
 		new_value->temporary = is_temporary;
+		new_value->stored_in_env = env;
 		if (is_declarator) {
 			new_value->variable_number = env->env_size;
 			env->env_size = env->env_size + 1;

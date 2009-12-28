@@ -83,13 +83,14 @@ void append_code(tac_quad *quad) {
 }
 
 /* Make a TAC quad */
-tac_quad *make_quad_value(char *op, value *operand1, value *operand2, value *result, int type) {
+tac_quad *make_quad_value(char *op, value *operand1, value *operand2, value *result, int type, int subtype) {
 	tac_quad *tmp_quad = (tac_quad *)malloc(sizeof(tac_quad));
 	tmp_quad->op = (char *)malloc(sizeof(char) * (strlen(op) + 1));
 	tmp_quad->operand1 = operand1;
 	tmp_quad->operand2 = operand2;
 	tmp_quad->result = result;
 	tmp_quad->type = type;
+	tmp_quad->subtype = subtype;
 	strcpy(tmp_quad->op, op);
 	return tmp_quad;
 }
@@ -126,47 +127,47 @@ void build_else_part(environment *env, NODE *node, int true_part, int flag, int 
 
 /* Generate jump label with given name */
 tac_quad *prepare_fn(value *func) {
-	return make_quad_value("", func, NULL, NULL, TT_PREPARE);
+	return make_quad_value("", func, NULL, NULL, TT_PREPARE, 0);
 }
 
 /* Generate jump label with given name */
 tac_quad *make_label(char *label_name) {
-	return make_quad_value("", string_value(label_name), NULL, NULL, TT_LABEL);
+	return make_quad_value("", string_value(label_name), NULL, NULL, TT_LABEL, 0);
 }
 
 /* Generate IF statement from given condition and true jump label */
 tac_quad *make_if(value *condition, char *true_label) {
-	return make_quad_value("", condition, NULL, string_value(true_label), TT_IF);
+	return make_quad_value("", condition, NULL, string_value(true_label), TT_IF, 0);
 }
 
 /* Generate IF statement from given condition and true jump label */
 tac_quad *make_goto(char *label_name) {
-	return make_quad_value("", string_value(label_name), NULL, NULL, TT_GOTO);
+	return make_quad_value("", string_value(label_name), NULL, NULL, TT_GOTO, 0);
 }
 
 /* Generate RETURN statement with given return value */
 tac_quad *make_return(value *return_value) {
-	return make_quad_value("", return_value, NULL, NULL, TT_RETURN);
+	return make_quad_value("", return_value, NULL, NULL, TT_RETURN, 0);
 }
 
 /* Generate an END_FN statement */
 tac_quad *make_end_fn() {
-	return make_quad_value("", NULL, NULL, NULL, TT_END_FN);
+	return make_quad_value("", NULL, NULL, NULL, TT_END_FN, 0);
 }
 
 /* Generate an BEGIN_FN statement */
 tac_quad *make_begin_fn(value *fn_def) {
-	return make_quad_value("", fn_def, NULL, NULL, TT_BEGIN_FN);
+	return make_quad_value("", fn_def, NULL, NULL, TT_BEGIN_FN, 0);
 }
 
 /* Generate FN Definition label */
 tac_quad *make_fn_def(value *fn_def) {
-	return make_quad_value("", string_value(fn_def->identifier), NULL, NULL, TT_FN_DEF);
+	return make_quad_value("", string_value(fn_def->identifier), NULL, NULL, TT_FN_DEF, 0);
 }
 
 /* Generate FN call */
 tac_quad *make_fn_call(value *result, value *fn_def) {
-	return make_quad_value("", fn_def, NULL, result, TT_FN_CALL);
+	return make_quad_value("", fn_def, NULL, result, TT_FN_CALL, 0);
 }
 
 /* Build necessary code for an if statement */
@@ -271,7 +272,7 @@ void register_params(environment *env, value *param_list) {
 			default:
 				fatal("Could not determine parameter type!");
 		}
-		append_code(make_quad_value("", param, NULL, NULL, TT_POP_PARAM));
+		append_code(make_quad_value("", param, NULL, NULL, TT_POP_PARAM, 0));
 		current_param = current_param->next;
 	}
 }
@@ -282,7 +283,7 @@ tac_quad *push_params(value *params_head) {
 	if (params_head->next) {
 		append_code(push_params(params_head->next));
 	}
-	return make_quad_value("", params_head, NULL, NULL, TT_PUSH_PARAM);		
+	return make_quad_value("", params_head, NULL, NULL, TT_PUSH_PARAM, 0);		
 }
 
 /* Declare variables underneath a declarator tree */
@@ -397,7 +398,7 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			/* Type check the assignment */
 			type_check_assignment(val1, val2, vt_type_convert(temp->value_type));
 			temporary = assign(env, val1, val2, 0);
-			if (flag != INTERPRET_FN_SCAN) append_code(make_quad_value("=", val2, NULL, temporary, TT_ASSIGN));
+			if (flag != INTERPRET_FN_SCAN) append_code(make_quad_value("=", val2, NULL, temporary, TT_ASSIGN, 0));
 			return NULL;
 		case '*':
 		case '/':
@@ -413,7 +414,7 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			temporary = generate_temporary(env, int_value(0));
 			val1 = make_simple(env, node->left, flag, return_type);
 			val2 = make_simple(env, node->right, flag, return_type);
-			if (flag != INTERPRET_FN_SCAN) append_code(make_quad_value(type_to_string(type_of(node)), val1, val2, temporary, TT_OP));
+			if (flag != INTERPRET_FN_SCAN) append_code(make_quad_value(type_to_string(type_of(node)), val1, val2, temporary, TT_OP, type_of(node)));
 			return temporary;
 		case '~':
 			if (flag != INTERPRET_PARAMS && flag!=INTERPRET_FN_SCAN) {

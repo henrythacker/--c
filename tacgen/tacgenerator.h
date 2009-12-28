@@ -39,6 +39,7 @@ typedef struct tac_quad {
 	value *operand2;	
 	value *result;
 	int type;
+	int subtype;
 	struct tac_quad *next;		
 }tac_quad;
 
