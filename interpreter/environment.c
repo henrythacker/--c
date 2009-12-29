@@ -150,6 +150,19 @@ void debug_environment(environment *env) {
 	}
 }
 
+/* Get the variable with the specified variable number */
+value *get_with_variable_number(environment *env, int number) {
+	if (env) {
+		int i = 0;
+		for (i = 0; i < HASH_VALUE_SIZE; i++) {
+			if (env->values[i] && env->values[i]->variable_number==number) {
+				return env->values[i];
+			}
+		}
+	}
+	return NULL;
+}
+
 /* Wrapper to store a function in the environment */
 value *store_function(environment *env, value *func, environment *local_env) {
 	/* Check we were passed valid data */

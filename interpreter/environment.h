@@ -71,6 +71,7 @@ typedef struct function_declaration {
 int env_size(environment *env);
 environment *create_environment(environment *);
 value *find_leaf_value(value *);
+value *get_with_variable_number(environment *, int);
 value *get(environment *, char *);
 extern value *string_value(char *);
 void debug_print_value(value *);
