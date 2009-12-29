@@ -162,6 +162,34 @@ void cg_operation(int operation, value *op1, value *op2, value *result) {
 	}
 }
 
+/* Code generate PUSHING a parameter */
+void cg_push_param(value *operand, int param_number) {
+	if (param_number > 4) {
+		/* TO DO: Store at end of stack */
+	}
+	else {
+		/* TO DO: If value is not empty, save it in current frame */
+		int operand_reg = which_register(operand, 1);
+		printf("\tmove $a%d, %s # Push operand %d\n", param_number, regs[operand_reg]->name, param_number + 1);
+	}
+}
+
+/* Code generate POPPING a parameter */
+void cg_pop_param(value *operand, int param_number) {
+	if (param_number > 4) {
+		/* TO DO: Load from end of stack */
+	}
+	else {
+		int index = param_number + 1;
+		if (regs[index]->contents) {
+			/* TO DO: Backup existing value */
+		}
+		regs[index]->contents = operand;
+		regs[index]->assignment_id = ++regs_assignments;
+		regs[index]->accesses = 1;
+	}
+}
+
 /* Write out code */
 void write_code(tac_quad *quad) {
 	static int param_number = 0;
@@ -171,17 +199,23 @@ void write_code(tac_quad *quad) {
 		case TT_FN_DEF:
 			break;
 		case TT_BEGIN_FN:
+			param_number = 0;
 			current_env = quad->operand1->data.func->local_env;
 			break;
 		case TT_LABEL:
 			break;
 		case TT_ASSIGN:
 			break;
+		case TT_POP_PARAM:
+			cg_pop_param(quad->operand1, param_number);
+			param_number++;
+			break;	
 		case TT_PUSH_PARAM:
-			printf("\tsub $sp, $sp, 4 # Reserve space for pushed parameter\n");
-			printf("\tsw $t, 0($sp) # Reserve space for pushed parameter\n");			
+			cg_push_param(quad->operand1, param_number);
+			param_number++;
 			break;
 		case TT_PREPARE:
+			param_number = 0;
 			break;
 		case TT_OP:
 			cg_operation(quad->subtype, quad->operand1, quad->operand2, quad->result);
