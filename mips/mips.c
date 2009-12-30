@@ -190,6 +190,22 @@ void cg_pop_param(value *operand, int param_number) {
 	}
 }
 
+/* Code generate an assignment */
+void cg_assign(value *result, value *operand1) {
+	int result_reg = which_register(result, 0);
+	regs[result_reg]->contents = result;	
+	int op1_reg = which_register(operand1, 1);
+	regs[op1_reg]->contents = operand1;
+	printf("\tmove %s, %s\n", regs[result_reg]->name, regs[op1_reg]->name);
+}
+
+/* Code generate a fn call */
+void cg_fn_call(value *result, value *fn_def) {
+	int result_reg = which_register(result, 0);
+	regs[result_reg]->contents = result;	
+	printf("\tjal _%s\n\tmove %s, $v0\n", correct_string_rep(fn_def), regs[result_reg]->name);
+}
+
 /* Write out code */
 void write_code(tac_quad *quad) {
 	static int param_number = 0;
@@ -199,12 +215,15 @@ void write_code(tac_quad *quad) {
 		case TT_FN_DEF:
 			break;
 		case TT_BEGIN_FN:
+			if (strcmp(correct_string_rep(quad->operand1), "main")==0) entry_point = quad;
 			param_number = 0;
-			current_env = quad->operand1->data.func->local_env;
+			printf("_%s:\n", correct_string_rep(quad->operand1));
 			break;
 		case TT_LABEL:
+			printf("%s:\n", correct_string_rep(quad->operand1));		
 			break;
 		case TT_ASSIGN:
+			cg_assign(quad->result, quad->operand1);
 			break;
 		case TT_POP_PARAM:
 			cg_pop_param(quad->operand1, param_number);
@@ -223,10 +242,15 @@ void write_code(tac_quad *quad) {
 		case TT_FN_CALL:
 			// Reset param count
 			param_number = 0;
+			cg_fn_call(quad->result, quad->operand1);			
 			break;
 		case TT_RETURN:
 			/* Save the return value */
 			/* Restore the activation record */
+			if (quad->operand1) {
+				printf("\tmove $v0, %s # Set return value\n", regs[which_register(quad->operand1, 1)]->name);
+			}
+			printf("\tjr $ra\n");
 			break;
 		default:
 			printf("", quad->type);
