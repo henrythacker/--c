@@ -214,7 +214,8 @@ void cg_assign(value *result, value *operand1) {
 
 /* Code generate an IF statement */
 void cg_if(value *condition, value *true_label) {
-	
+	int condition_register = which_register(condition, 1);
+	printf("\tbne %s, $0, %s\n", regs[condition_register]->name, correct_string_rep(true_label));
 }
 
 /* Code generate a fn call */
@@ -253,6 +254,9 @@ void write_code(tac_quad *quad) {
 			printf("\tadd $sp, $sp, 4\n");
 			printf("\tsw $ra, 0($sp)\n");
 			param_number = -1;
+			break;
+		case TT_GOTO:
+			printf("\tj %s\n", correct_string_rep(quad->operand1));
 			break;
 		case TT_POP_PARAM:
 			cg_pop_param(quad->operand1, ++param_number);
