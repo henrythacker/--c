@@ -8,15 +8,6 @@ void write_preamble() {
 	printf("# Compiled from --C\n# %s\n\n.data\n\tEOL:\t.asciiz \"\\n\"\n.text\n", asctime(local_time));
 }
 
-/* Find size required for a given fn */
-int local_size(value *fn_def) {
-	if (!fn_def) return 0;
-	if (fn_def->value_type!=VT_FUNCTN) return 0;
-	environment *env = fn_def->data.func->local_env;
-	if (!env) fatal("Size of local environment can not be determined");
-	return env_size(env);
-}
-
 /* Is the value a constant? */
 int is_constant(value *var) {
 	return var && !var->temporary && var->value_type == VT_INTEGR && var->identifier[0]=='_';
@@ -26,9 +17,7 @@ void write_epilogue() {
 	tac_quad *quad = entry_point;
 	if (!entry_point) return;
 	printf("main:\n");
-	printf("\tsub $sp, %d\n", ACTIVATION_RECORD_SIZE);
 	printf("\tjal _main\n");
-	printf("\tadd $sp, %d\n", ACTIVATION_RECORD_SIZE);
 	printf("\tmove $a0, $v0\n");
 	/* Print result */
 	printf("\tli $v0, 1\n\tsyscall\n");
@@ -89,7 +78,7 @@ int choose_best_reg() {
 				optimal_reg = position;
 			}
 		}
-		/* TO DO: Move out existing value into stack */
+		/* TO DO: Move out existing value into heap */
 		regs[optimal_reg]->assignment_id = ++regs_assignments;
 		regs[optimal_reg]->contents = NULL;
 		regs[optimal_reg]->accesses = 1;		
@@ -113,21 +102,25 @@ int already_in_reg(value *var) {
 	return REG_VALUE_NOT_AVAILABLE;
 }
 
-/* Make the activation record structure, store the address of the created structure into the destination_reg */
-int generate_activation_record(int local_size) {
+int activation_record_size(int local_size) {
 	int word_size = 4;
 	/* Special fields are: */
-	/* - Return Address */
 	/* - Previous $fp */
 	/* - Static link */		
-	int special_fields = 3; 
+	int special_fields = 2; 
 	int allocation_size = (word_size * local_size) + (word_size * special_fields);
+	return allocation_size;
+}
+
+/* Make the activation record structure, store the address of the created structure into the destination_reg */
+int generate_activation_record(int local_size) {
+	int allocation_size = activation_record_size(local_size);
 	/* TO DO: Move aside whatever is in $a0, $v0 */
 	printf("\tli $a0, %d # Allocation size for activation record\n", allocation_size);
 	printf("\tli $v0, 9 # Allocate space systemcode\n");
 	printf("\tsyscall # Allocate space on heap\n");
 	/* Move result */
-	printf("\tmove $sp, $v0 # Save activation record address\n");
+	printf("\tmove $s0, $v0 # Save activation record address\n");
 	/* TO DO: Restore whatever was in $a0, $v0 */
 	return allocation_size;
 }
@@ -185,7 +178,7 @@ void cg_operation(int operation, value *op1, value *op2, value *result) {
 /* Code generate PUSHING a parameter */
 void cg_push_param(value *operand, int param_number) {
 	if (param_number > 4) {
-		/* TO DO: Store at end of stack */
+		/* TO DO: Store at end of heap */
 	}
 	else {
 		/* TO DO: If value is not empty, save it in current frame */
@@ -197,7 +190,7 @@ void cg_push_param(value *operand, int param_number) {
 /* Code generate POPPING a parameter */
 void cg_pop_param(value *operand, int param_number) {
 	if (param_number > 4) {
-		/* TO DO: Load from end of stack */
+		/* TO DO: Load from end of heap */
 	}
 	else {
 		int index = param_number + 1;
@@ -230,29 +223,30 @@ void cg_fn_call(value *result, value *fn_def) {
 void write_code(tac_quad *quad) {
 	/* No parameters, 0 = 1 parameter (0 because $a0 is first arg register), so -1 is no args */
 	static int param_number = -1;
+	static int frame_size = 0;
 	int size = 0;
 	int temporary;
 	if (!quad) return;
 	switch(quad->type) {
 		case TT_FN_DEF:
-		
 			break;
 		case TT_INIT_FRAME:
-			/* Get a place to store the old $sp - i.e. static link */
+			/* Get a place to store the old $s0 - i.e. static link */
 			temporary = choose_best_reg();
 			size = to_int(NULL, quad->operand1);
-			printf("\tmove %s, $sp\n", regs[temporary]->name);
+			printf("\tmove %s, $s0\n", regs[temporary]->name);
 			size = generate_activation_record(size);
-			/* Store return address AFTER parameters */
-			printf("\tsw $ra, %d($sp) # Save return address\n", size - (4 * param_count(quad->operand1)));
-			/* Store frame pointer AFTER return address */
-			printf("\tsw $fp, %d($sp) # Save previous frame ptr\n", size - (4 * param_count(quad->operand1)) - 4);
+			frame_size = size;
+			/* Store frame pointer */
+			printf("\tsw $fp, %d($s0) # Save previous frame ptr\n", size - 4);
 			/* Store static link AFTER frame pointer */
-			printf("\tsw %s, %d($sp) # Save static link\n", regs[temporary]->name, size - (4 * param_count(quad->operand1)) - 8);
+			printf("\tsw %s, %d($s0) # Save static link\n", regs[temporary]->name, size - 8);
 			break;
 		case TT_BEGIN_FN:
 			if (strcmp(correct_string_rep(quad->operand1), "main")==0) entry_point = quad;
 			printf("_%s:\n", correct_string_rep(quad->operand1));
+			printf("\tadd $sp, $sp, 4\n");
+			printf("\tsw $ra, 0($sp)\n");
 			param_number = -1;
 			break;
 		case TT_POP_PARAM:
@@ -280,15 +274,31 @@ void write_code(tac_quad *quad) {
 			param_number = -1;
 			cg_fn_call(quad->result, quad->operand1);			
 			break;
+		case TT_END_FN:
+			/* Load return address from stack */
+			printf("\tlw $ra, 0($sp) # Get return address\n");
+			printf("\tsub $sp, $sp, 4 # Pop return address from stack\n");
+			printf("\tmove $v0, $0 # Null return value\n");
+			/* Load previous frame pointer */
+			printf("\tlw $fp, %d($s0) # Load previous frame ptr\n", frame_size - 4);
+			/* Load previous heap pointer */
+			printf("\tlw $s0, %d($s0) # Load static link\n", frame_size - 8);
+			printf("\tjr $ra # Jump to $ra\n");
+			break;
 		case TT_RETURN:
 			/* Save the return value */
 			/* Restore the activation record */
 			if (quad->operand1) {
 				printf("\tmove $v0, %s # Set return value\n", regs[which_register(quad->operand1, 1)]->name);
 			}
-			printf("\tlw $ra, 0($sp)\n");
-			printf("\taddi $sp, $sp, 4\n");
-			printf("\tjr $ra\n");
+			/* Load previous return address from stack */
+			printf("\tlw $ra, 0($sp) # Get return address\n");
+			printf("\tsub $sp, $sp, 4 # Pop return address from stack\n");
+			/* Load previous frame pointer */
+			printf("\tlw $fp, %d($s0) # Load previous frame ptr\n", frame_size - 4);
+			/* Load previous "heap" pointer */
+			printf("\tlw $s0, %d($s0) # Load static link\n", frame_size - 8);
+			printf("\tjr $ra # Jump to $ra\n");
 			break;
 		default:
 			printf("", quad->type);

@@ -29,6 +29,7 @@
 #include "token.h"
 
 /* Fn prototypes */
+struct tac_quad *make_quad_value(char *, value *, value *, value *, int, int);
 struct tac_quad *start_tac_gen(NODE *);
 value *make_simple(environment *, NODE *, int, int);
 void print_tac(struct tac_quad *);

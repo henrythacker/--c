@@ -154,8 +154,8 @@ tac_quad *make_return(value *return_value) {
 }
 
 /* Generate an END_FN statement */
-tac_quad *make_end_fn() {
-	return make_quad_value("", NULL, NULL, NULL, TT_END_FN, 0);
+tac_quad *make_end_fn(value *fn_def) {
+	return make_quad_value("", fn_def, NULL, NULL, TT_END_FN, 0);
 }
 
 /* Generate an INIT_FRAME statement */
@@ -464,7 +464,7 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 				/* Update prepare frame with environment size */
 				temp_quad->operand1 = int_value(env_size(new_env));
 				/* Write end of function marker */
-				append_code(make_end_fn());
+				append_code(make_end_fn(val2));
 			}
 			return NULL;
 		case 'd':
