@@ -237,19 +237,22 @@ void write_code(tac_quad *quad) {
 		case TT_FN_DEF:
 		
 			break;
+		case TT_INIT_FRAME:
+			/* Get a place to store the old $sp - i.e. static link */
+			temporary = choose_best_reg();
+			size = to_int(NULL, quad->operand1);
+			printf("\tmove %s, $sp\n", regs[temporary]->name);
+			size = generate_activation_record(size);
+			/* Store return address AFTER parameters */
+			printf("\tsw $ra, %d($sp) # Save return address\n", size - (4 * param_count(quad->operand1)));
+			/* Store frame pointer AFTER return address */
+			printf("\tsw $fp, %d($sp) # Save previous frame ptr\n", size - (4 * param_count(quad->operand1)) - 4);
+			/* Store static link AFTER frame pointer */
+			printf("\tsw %s, %d($sp) # Save static link\n", regs[temporary]->name, size - (4 * param_count(quad->operand1)) - 8);
+			break;
 		case TT_BEGIN_FN:
 			if (strcmp(correct_string_rep(quad->operand1), "main")==0) entry_point = quad;
 			printf("_%s:\n", correct_string_rep(quad->operand1));
-			/* Get a place to store the old $sp - i.e. static link */
-			temporary = choose_best_reg();
-			printf("\tmove %s, $sp\n", regs[temporary]->name);
-			size = generate_activation_record(local_size(quad->operand1));
-			/* Store return address AFTER parameters */
-			printf("\tsw $ra, %d($sp) # Save return address\n", size - (4 * param_count(quad->operand1)) - 4);
-			/* Store frame pointer AFTER return address */
-			printf("\tsw $fp, %d($sp) # Save previous frame ptr\n", size - (4 * param_count(quad->operand1)) - 8);
-			/* Store static link AFTER frame pointer */
-			printf("\tsw %s, %d($sp) # Save static link\n", regs[temporary]->name, size - (4 * param_count(quad->operand1)) - 12);
 			param_number = -1;
 			break;
 		case TT_LABEL:

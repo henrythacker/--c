@@ -26,8 +26,8 @@ void print_tac(tac_quad *quad) {
 		case TT_FN_CALL:
 			printf("%s = CallFn _%s\n", correct_string_rep(quad->result), to_string(quad->operand1));
 			break;			
-		case TT_PREPARE_FRAME:
-			printf("Locals \n", correct_string_rep(quad->operand1));
+		case TT_INIT_FRAME:
+			printf("InitFrame %s\n", correct_string_rep(quad->operand1));
 			break;
 		case TT_PUSH_PARAM:
 			printf("PushParam %s\n", correct_string_rep(quad->operand1));
@@ -37,7 +37,7 @@ void print_tac(tac_quad *quad) {
 			break;			
 		case TT_ASSIGN:
 			printf("%s %s %s\n", correct_string_rep(quad->result), quad->op, correct_string_rep(quad->operand1));
-			break;			
+			break;
 		case TT_GOTO:
 			printf("goto %s\n", correct_string_rep(quad->operand1));
 			break;
@@ -53,7 +53,7 @@ void print_tac(tac_quad *quad) {
 			}
 			break;
 		case TT_PREPARE:
-			printf("Prepare %d\n", param_count(quad->operand1));
+			printf("PrepareToCall %d\n", param_count(quad->operand1));
 			break;	
 		case TT_BEGIN_FN:
 			printf("BeginFn %d\n", param_count(quad->operand1));
@@ -153,6 +153,11 @@ tac_quad *make_return(value *return_value) {
 /* Generate an END_FN statement */
 tac_quad *make_end_fn() {
 	return make_quad_value("", NULL, NULL, NULL, TT_END_FN, 0);
+}
+
+/* Generate an INIT_FRAME statement */
+tac_quad *make_init_frame() {
+	return make_quad_value("", int_value(0), NULL, NULL, TT_INIT_FRAME, 0);
 }
 
 /* Generate an BEGIN_FN statement */
@@ -349,6 +354,7 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 	value *val1, *val2, *temporary, *temp;
 	static int if_count = 0;
 	static int while_count = 0;	
+	tac_quad *temp_quad;
 	environment *new_env;
 	if (node==NULL) return NULL;
 	switch(type_of(node)) {
@@ -447,8 +453,12 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 				append_code(make_begin_fn(val2));				
 				/* Define parameters with default empty values */
 				register_params(new_env, val2->data.func->params);
+				temp_quad = make_init_frame();
+				append_code(temp_quad);
 				/* Look inside fn body */
 				val2 = make_simple(new_env, node->right, EMBEDDED_FNS, val1->data.func->return_type);
+				/* Update prepare frame with environment size */
+				temp_quad->operand1 = int_value(env_size(new_env));
 				/* Write end of function marker */
 				append_code(make_end_fn());
 			}
