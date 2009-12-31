@@ -188,7 +188,7 @@ void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *false_j
 	
 	/* Generate if statement */
 	s_tmp = malloc(sizeof(char) * 25);
-	sprintf(s_tmp, "$if%dtrue", if_count);
+	sprintf(s_tmp, "__if%dtrue", if_count);
 	append_code(make_if(val1, s_tmp));
 
 	/* Output false branch (i.e. else part) */	
@@ -203,13 +203,13 @@ void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *false_j
 	}
 	else {
 		s_tmp = malloc(sizeof(char) * 25);
-		sprintf(s_tmp, "$if%dend", if_count);
+		sprintf(s_tmp, "__if%dend", if_count);
 		append_code(make_goto(s_tmp));
 	}
 	
 	/* Generate label for start of true branch */
 	s_tmp = malloc(sizeof(char) * 25);
-	sprintf(s_tmp, "$if%dtrue", if_count);
+	sprintf(s_tmp, "__if%dtrue", if_count);
 	append_code(make_label(s_tmp));
 	
 	/* Output true branch */
@@ -229,7 +229,7 @@ void build_if_stmt(environment *env, NODE *node, int if_count, tac_quad *false_j
 	
 	/* Generate end of IF stmt label */
 	s_tmp = malloc(sizeof(char) * 25);
-	sprintf(s_tmp, "$if%dend", if_count);
+	sprintf(s_tmp, "__if%dend", if_count);
 	append_code(make_label(s_tmp));
 }
 
@@ -241,17 +241,17 @@ void build_while_stmt(environment *env, NODE *node, int while_count, int if_coun
 	
 	/* Generate label for start of while loop */
 	s_tmp = malloc(sizeof(char) * 25);
-	sprintf(s_tmp, "$while%d", while_count);
+	sprintf(s_tmp, "__while%d", while_count);
 	append_code(make_label(s_tmp));
 	
 	/* Generate loop jump */
 	s_tmp = malloc(sizeof(char) * 25);
-	sprintf(s_tmp, "$while%d", while_count);
+	sprintf(s_tmp, "__while%d", while_count);
 	loop_jmp = make_goto(s_tmp);
 
 	/* End while loop stmt */
 	s_tmp = malloc(sizeof(char) * 25);
-	sprintf(s_tmp, "$while%dend", while_count);
+	sprintf(s_tmp, "__while%dend", while_count);
 	
 	/* Build IF stmt for condition */
 	build_if_stmt(env, node, if_count, make_goto(s_tmp), loop_jmp, flag, return_type);
@@ -376,12 +376,12 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			return NULL;
 		case BREAK:
 			s_tmp = malloc(sizeof(char) * 25);
-			sprintf(s_tmp, "$while%dend", while_count);
+			sprintf(s_tmp, "__while%dend", while_count);
 			append_code(make_goto(s_tmp));
 			return NULL;			
 		case CONTINUE:
 			s_tmp = malloc(sizeof(char) * 25);
-			sprintf(s_tmp, "$while%d", while_count);
+			sprintf(s_tmp, "__while%d", while_count);
 			append_code(make_goto(s_tmp));
 			return NULL;
 		case WHILE:

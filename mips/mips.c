@@ -212,6 +212,11 @@ void cg_assign(value *result, value *operand1) {
 	printf("\tmove %s, %s\n", regs[result_reg]->name, regs[op1_reg]->name);
 }
 
+/* Code generate an IF statement */
+void cg_if(value *condition, value *true_label) {
+	
+}
+
 /* Code generate a fn call */
 void cg_fn_call(value *result, value *fn_def) {
 	int result_reg = which_register(result, 0);
@@ -250,8 +255,7 @@ void write_code(tac_quad *quad) {
 			param_number = -1;
 			break;
 		case TT_POP_PARAM:
-			cg_pop_param(quad->operand1, param_number);
-			param_number++;
+			cg_pop_param(quad->operand1, ++param_number);
 			break;
 		case TT_LABEL:
 			printf("%s:\n", correct_string_rep(quad->operand1));		
@@ -261,10 +265,12 @@ void write_code(tac_quad *quad) {
 			break;
 		case TT_PUSH_PARAM:
 			cg_push_param(quad->operand1, ++param_number);
-			param_number++;
 			break;
 		case TT_PREPARE:
 			param_number = -1;
+			break;
+		case TT_IF:
+			cg_if(quad->operand1, quad->result);
 			break;
 		case TT_OP:
 			cg_operation(quad->subtype, quad->operand1, quad->operand2, quad->result);
