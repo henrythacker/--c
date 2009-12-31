@@ -131,6 +131,7 @@ int which_register(value *var, int must_already_exist) {
 		/* Special zero register */
 		if (to_int(NULL, var)==0) return 0;
 		printf("\tli %s, %s # Load constant into freed register\n", regs[reg_id]->name, correct_string_rep(var));
+		regs[reg_id]->contents = var;	
 	}
 	return reg_id;
 }
@@ -218,6 +219,8 @@ void write_code(tac_quad *quad) {
 			if (strcmp(correct_string_rep(quad->operand1), "main")==0) entry_point = quad;
 			param_number = 0;
 			printf("_%s:\n", correct_string_rep(quad->operand1));
+			printf("\tsub $sp, $sp, 4\n");
+			printf("\tsw $ra, 0($sp)\n");
 			break;
 		case TT_LABEL:
 			printf("%s:\n", correct_string_rep(quad->operand1));		
@@ -250,6 +253,8 @@ void write_code(tac_quad *quad) {
 			if (quad->operand1) {
 				printf("\tmove $v0, %s # Set return value\n", regs[which_register(quad->operand1, 1)]->name);
 			}
+			printf("\tlw $ra, 0($sp)\n");
+			printf("\taddi $sp, $sp, 4\n");
 			printf("\tjr $ra\n");
 			break;
 		default:
