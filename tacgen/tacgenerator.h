@@ -12,8 +12,9 @@
 #define TT_FN_DEF 158
 #define TT_INIT_FRAME 159
 #define TT_PUSH_PARAM 160
-#define TT_FN_CALL 161
-#define TT_PREPARE 162
+#define TT_POP_PARAM 161
+#define TT_FN_CALL 162
+#define TT_PREPARE 163
 
 #define EMBEDDED_FNS 300
 

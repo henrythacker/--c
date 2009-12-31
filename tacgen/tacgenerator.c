@@ -29,6 +29,9 @@ void print_tac(tac_quad *quad) {
 		case TT_INIT_FRAME:
 			printf("InitFrame %s\n", correct_string_rep(quad->operand1));
 			break;
+		case TT_POP_PARAM:
+     		printf("PopParam %s\n", quad->operand1->identifier);
+			break;
 		case TT_PUSH_PARAM:
 			printf("PushParam %s\n", correct_string_rep(quad->operand1));
 			break;
@@ -277,6 +280,7 @@ void register_params(environment *env, value *param_list) {
 			default:
 				fatal("Could not determine parameter type!");
 		}
+		append_code(make_quad_value("", param, NULL, NULL, TT_POP_PARAM, 0));
 		current_param = current_param->next;
 	}
 }

@@ -255,6 +255,10 @@ void write_code(tac_quad *quad) {
 			printf("_%s:\n", correct_string_rep(quad->operand1));
 			param_number = -1;
 			break;
+		case TT_POP_PARAM:
+			cg_pop_param(quad->operand1, param_number);
+			param_number++;
+			break;
 		case TT_LABEL:
 			printf("%s:\n", correct_string_rep(quad->operand1));		
 			break;
