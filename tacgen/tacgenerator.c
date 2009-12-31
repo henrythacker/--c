@@ -26,8 +26,8 @@ void print_tac(tac_quad *quad) {
 		case TT_FN_CALL:
 			printf("%s = CallFn _%s\n", correct_string_rep(quad->result), to_string(quad->operand1));
 			break;			
-		case TT_POP_PARAM:
-			printf("PopParam %s\n", quad->operand1->identifier);
+		case TT_PREPARE_FRAME:
+			printf("Locals \n", correct_string_rep(quad->operand1));
 			break;
 		case TT_PUSH_PARAM:
 			printf("PushParam %s\n", correct_string_rep(quad->operand1));
@@ -272,7 +272,6 @@ void register_params(environment *env, value *param_list) {
 			default:
 				fatal("Could not determine parameter type!");
 		}
-		append_code(make_quad_value("", param, NULL, NULL, TT_POP_PARAM, 0));
 		current_param = current_param->next;
 	}
 }
@@ -434,13 +433,6 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			/* val1 is executed in current environment */
 			val1 = make_simple(env, node->left, flag, return_type);
 			
-			/* If this is an embedded function, generate a goto to the end of the fn def */
-			/* Otherwise, we will inadvertendly attempt to execute the inner fn */
-			s_tmp = malloc(sizeof(char) * (strlen(val1->identifier) + 2));
-			sprintf(s_tmp, "~%s", val1->identifier);
-			if (flag == EMBEDDED_FNS) {
-				append_code(make_goto(s_tmp));
-			}
 			/* New FN body environment */
 			new_env = create_environment(env);
 			if (val1!=NULL) {
@@ -459,10 +451,6 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 				val2 = make_simple(new_env, node->right, EMBEDDED_FNS, val1->data.func->return_type);
 				/* Write end of function marker */
 				append_code(make_end_fn());
-				/* Write end of function label if embedded fn */
-				if (flag == EMBEDDED_FNS) {
-					append_code(make_label(s_tmp));
-				}
 			}
 			return NULL;
 		case 'd':

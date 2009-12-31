@@ -14,7 +14,7 @@ int local_size(value *fn_def) {
 	if (fn_def->value_type!=VT_FUNCTN) return 0;
 	environment *env = fn_def->data.func->local_env;
 	if (!env) fatal("Size of local environment can not be determined");
-	return env->env_size;
+	return env_size(env);
 }
 
 /* Is the value a constant? */
@@ -113,6 +113,25 @@ int already_in_reg(value *var) {
 	return REG_VALUE_NOT_AVAILABLE;
 }
 
+/* Make the activation record structure, store the address of the created structure into the destination_reg */
+int generate_activation_record(int local_size) {
+	int word_size = 4;
+	/* Special fields are: */
+	/* - Return Address */
+	/* - Previous $fp */
+	/* - Static link */		
+	int special_fields = 3; 
+	int allocation_size = (word_size * local_size) + (word_size * special_fields);
+	/* TO DO: Move aside whatever is in $a0, $v0 */
+	printf("\tli $a0, %d # Allocation size for activation record\n", allocation_size);
+	printf("\tli $v0, 9 # Allocate space systemcode\n");
+	printf("\tsyscall # Allocate space on heap\n");
+	/* Move result */
+	printf("\tmove $sp, $v0 # Save activation record address\n");
+	/* TO DO: Restore whatever was in $a0, $v0 */
+	return allocation_size;
+}
+
 /* All encompassing register assignment fn */
 int which_register(value *var, int must_already_exist) {
 	int reg_id = already_in_reg(var);
@@ -209,18 +228,29 @@ void cg_fn_call(value *result, value *fn_def) {
 
 /* Write out code */
 void write_code(tac_quad *quad) {
-	static int param_number = 0;
-	static environment *current_env = NULL;
+	/* No parameters, 0 = 1 parameter (0 because $a0 is first arg register), so -1 is no args */
+	static int param_number = -1;
+	int size = 0;
+	int temporary;
 	if (!quad) return;
 	switch(quad->type) {
 		case TT_FN_DEF:
+		
 			break;
 		case TT_BEGIN_FN:
 			if (strcmp(correct_string_rep(quad->operand1), "main")==0) entry_point = quad;
-			param_number = 0;
 			printf("_%s:\n", correct_string_rep(quad->operand1));
-			printf("\tsub $sp, $sp, 4\n");
-			printf("\tsw $ra, 0($sp)\n");
+			/* Get a place to store the old $sp - i.e. static link */
+			temporary = choose_best_reg();
+			printf("\tmove %s, $sp\n", regs[temporary]->name);
+			size = generate_activation_record(local_size(quad->operand1));
+			/* Store return address AFTER parameters */
+			printf("\tsw $ra, %d($sp) # Save return address\n", size - (4 * param_count(quad->operand1)) - 4);
+			/* Store frame pointer AFTER return address */
+			printf("\tsw $fp, %d($sp) # Save previous frame ptr\n", size - (4 * param_count(quad->operand1)) - 8);
+			/* Store static link AFTER frame pointer */
+			printf("\tsw %s, %d($sp) # Save static link\n", regs[temporary]->name, size - (4 * param_count(quad->operand1)) - 12);
+			param_number = -1;
 			break;
 		case TT_LABEL:
 			printf("%s:\n", correct_string_rep(quad->operand1));		
@@ -228,23 +258,19 @@ void write_code(tac_quad *quad) {
 		case TT_ASSIGN:
 			cg_assign(quad->result, quad->operand1);
 			break;
-		case TT_POP_PARAM:
-			cg_pop_param(quad->operand1, param_number);
-			param_number++;
-			break;	
 		case TT_PUSH_PARAM:
-			cg_push_param(quad->operand1, param_number);
+			cg_push_param(quad->operand1, ++param_number);
 			param_number++;
 			break;
 		case TT_PREPARE:
-			param_number = 0;
+			param_number = -1;
 			break;
 		case TT_OP:
 			cg_operation(quad->subtype, quad->operand1, quad->operand2, quad->result);
 			break;
 		case TT_FN_CALL:
 			// Reset param count
-			param_number = 0;
+			param_number = -1;
 			cg_fn_call(quad->result, quad->operand1);			
 			break;
 		case TT_RETURN:

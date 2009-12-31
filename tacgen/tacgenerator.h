@@ -10,7 +10,7 @@
 #define TT_BEGIN_FN 156
 #define TT_END_FN 157
 #define TT_FN_DEF 158
-#define TT_POP_PARAM 159
+#define TT_PREPARE_FRAME 159
 #define TT_PUSH_PARAM 160
 #define TT_FN_CALL 161
 #define TT_PREPARE 162

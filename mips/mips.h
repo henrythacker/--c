@@ -16,6 +16,7 @@
 #include "conversion.h"
 #include "token.h"
 #include "tacgenerator.h"
+#include "interpreter.h"
 
 /* Fn prototypes */
 void code_gen(NODE *);
