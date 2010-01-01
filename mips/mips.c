@@ -116,12 +116,16 @@ int activation_record_size(int local_size) {
 int generate_activation_record(int local_size) {
 	int allocation_size = activation_record_size(local_size);
 	/* TO DO: Move aside whatever is in $a0, $v0 */
+	printf("\tmove $s1, $a0 # Backup $a0\n");
+	printf("\tmove $s2, $v0 # Backup $v0\n");	
 	printf("\tli $a0, %d # Allocation size for activation record\n", allocation_size);
 	printf("\tli $v0, 9 # Allocate space systemcode\n");
 	printf("\tsyscall # Allocate space on heap\n");
 	/* Move result */
 	printf("\tmove $s0, $v0 # Save activation record address\n");
 	/* TO DO: Restore whatever was in $a0, $v0 */
+	printf("\tmove $a0, $s1 # Restore $a0\n");
+	printf("\tmove $v0, $s2 # Restore $v0\n");
 	return allocation_size;
 }
 
@@ -230,11 +234,34 @@ void write_code(tac_quad *quad) {
 	/* No parameters, 0 = 1 parameter (0 because $a0 is first arg register), so -1 is no args */
 	static int param_number = -1;
 	static int frame_size = 0;
+	static int nesting_level = -1;
 	int size = 0;
 	int temporary;
 	if (!quad) return;
+	/* Reorder the TAC so that inner fns are moved out */
+	if (nesting_level > 0) {
+		/* Copy the TAC quad, in order to discard the next ptr */
+		tac_quad *new_quad = make_quad_value(quad->op, quad->operand1, quad->operand2, quad->result, quad->type, quad->subtype);
+		if (!pending_code) {
+			pending_code = new_quad;
+		}
+		else {
+			/* Append the TAC */
+			tac_quad *tmp_quad = pending_code;
+			while (tmp_quad->next != NULL) {
+				tmp_quad = tmp_quad->next;
+			}
+			tmp_quad->next = new_quad;
+		}
+		if (quad->type == TT_END_FN) {
+			nesting_level--;		
+		}
+		write_code(quad->next);
+		return;
+	}
 	switch(quad->type) {
 		case TT_FN_DEF:
+			nesting_level++;
 			break;
 		case TT_INIT_FRAME:
 			/* Get a place to store the old $s0 - i.e. static link */
@@ -285,6 +312,7 @@ void write_code(tac_quad *quad) {
 			cg_fn_call(quad->result, quad->operand1);			
 			break;
 		case TT_END_FN:
+			nesting_level--;		
 			/* Load return address from stack */
 			printf("\tlw $ra, 0($sp) # Get return address\n");
 			printf("\tsub $sp, $sp, 4 # Pop return address from stack\n");
@@ -325,5 +353,7 @@ void code_gen(NODE *tree) {
 	tac_quad *quad = start_tac_gen(tree);
 	write_preamble();
 	write_code(quad);
+	/* Write out inner fns separately */
+	write_code(pending_code);
 	write_epilogue();
 }

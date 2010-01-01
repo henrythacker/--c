@@ -17,12 +17,16 @@
 #include "token.h"
 #include "tacgenerator.h"
 #include "interpreter.h"
+#include "codegen_utils.h"
 
 /* Fn prototypes */
 void code_gen(NODE *);
 
 /* Store reference to entry point */
 tac_quad *entry_point;
+
+/* Store pending code that can't be processed immediately */
+tac_quad *pending_code;
 
 typedef struct register_contents {
 	value *contents; /* Value stored in the register */
