@@ -143,10 +143,17 @@ operand *make_constant_operand(int constant) {
 	return tmp;
 }
 
-operand *make_label_operand(char *label) {
+operand *make_label_operand(char *label, ...) {
+	va_list arglist;
 	operand *tmp = new_operand();
+	char *bigstring = malloc(sizeof(char) * 300);
+	int i;
+	va_start(arglist, label);
+	vsprintf(bigstring, label, arglist);
+  	va_end(arglist);
 	/* Copy label */
-	tmp->label = malloc(sizeof(char) * (strlen(label) + 1));
-	strcpy(tmp->label, label);
+	tmp->label = malloc(sizeof(char) * (strlen(bigstring) + 1));
+	strcpy(tmp->label, bigstring);
+	free(bigstring);
 	return tmp;
 }

@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include "environment.h"
 
 #define OT_UNSET 2020
@@ -59,6 +60,6 @@ mips_instruction *mips(char *, int, int, int, operand *, operand *, operand *, c
 operand *make_register_operand(int);
 operand *make_offset_operand();
 operand *make_constant_operand(int);
-operand *make_label_operand(char *);
+operand *make_label_operand(char *, ...);
 
 #endif
