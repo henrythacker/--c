@@ -1,11 +1,31 @@
 #include "mips.h"
 
+/* Append MIPS code to generated code stack */
+void append_mips(struct mips_instruction *ins) {
+	/* Are there any existing instructions? */
+	if (!instructions) {
+		instructions = ins;
+	}
+	else {
+		struct mips_instruction *tmp_instruction = instructions;
+		while (tmp_instruction->next != NULL) {
+			tmp_instruction = tmp_instruction->next;
+		}
+		/* Append instruction onto the end */
+		tmp_instruction->next = ins;
+	}
+}
+
+/* Write header into source */
 void write_preamble() {
+	operand *comment;
+	mips_instruction *ins;
 	struct tm *local_time;
 	time_t gen_time;
 	gen_time = time(NULL);
 	local_time = localtime(&gen_time);
-	printf("# Compiled from --C\n# %s\n\n.data\n\tEOL:\t.asciiz \"\\n\"\n.text\n", asctime(local_time));
+	comment = make_label_operand("# Compiled from --C\n# %s\n.data\n\tEOL:\t.asciiz \"\\n\"\n.text\n", asctime(local_time));
+	append_mips(mips_comment(comment, 0));
 }
 
 /* Is the value a constant? */
@@ -350,22 +370,6 @@ void write_code(tac_quad *quad) {
 			break;
 	}
 	write_code(quad->next);
-}
-
-/* Append MIPS code to generated code stack */
-void append_mips(struct mips_instruction *ins) {
-	/* Are there any existing instructions? */
-	if (!instructions) {
-		instructions = ins;
-	}
-	else {
-		struct mips_instruction *tmp_instruction = instructions;
-		while (tmp_instruction->next != NULL) {
-			tmp_instruction = tmp_instruction->next;
-		}
-		/* Append instruction onto the end */
-		tmp_instruction->next = ins;
-	}
 }
 
 /* Generate MIPS code for given tree */

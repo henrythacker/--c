@@ -13,6 +13,7 @@
 #define OT_LABEL 6060
 #define OT_FN_LABEL 7070
 #define OT_ZERO_ADDRESS 8080
+#define OT_COMMENT 9090
 
 /* System registers enumeration */
 enum sys_register {
@@ -55,7 +56,7 @@ typedef struct mips_instruction {
 	struct mips_instruction *next;
 }mips_instruction;
 
-
+mips_instruction *mips_comment(operand *, int);
 mips_instruction *mips(char *, int, int, int, operand *, operand *, operand *, char *, int);
 operand *make_register_operand(int);
 operand *make_offset_operand();

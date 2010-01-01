@@ -56,6 +56,9 @@ void print_mips_operand(mips_instruction *instruction, int operand) {
 				printf("%d(%s)%s", operand_value->reg_offset->offset, register_name(operand_value->reg_offset->reg), more_operands ? ", " : "");				
 			}
 			break;
+		case OT_COMMENT:
+			printf("%s%s", operand_value->label, more_operands ? ", " : "");				
+			break;
 		case OT_CONSTANT:
 			printf("%d%s", operand_value->constant, more_operands ? ", " : "");				
 			break;
@@ -77,10 +80,10 @@ void print_mips(mips_instruction *instructions) {
 		/* Indent as requested */
 		printf("\t");
 	}
-	/* Check to see if we have a label by itself - i.e. a label definition */
+	/* Check to see if we have a single operand by itself (with no operation specified) - needs printing in a different way*/
 	if (instructions->operation && strlen(instructions->operation) == 0 && instructions->operand1_type != OT_UNSET && instructions->operand2_type == OT_UNSET && instructions->operand3_type == OT_UNSET) {
 		print_mips_operand(instructions, 1);
-		if (instructions->operand1_type != OT_ZERO_ADDRESS) printf(":");
+		if (instructions->operand1_type != OT_ZERO_ADDRESS && instructions->operand1_type != OT_COMMENT) printf(":");
 	}
 	else {
 		printf("%s ", instructions->operation);
@@ -115,6 +118,23 @@ mips_instruction *mips(char *operation, int op1type, int op2type, int op3type, o
 	instruction->operand3 = op3;
 	/* Set indentation for printing */
 	instruction->indent_count = indent_count;
+	instruction->next = NULL;
+	return instruction;
+}
+
+/* Generate a pseudo-instruction to hold a comment */
+mips_instruction *mips_comment(operand *comment, int indent_count) {
+	mips_instruction *instruction = (mips_instruction *)malloc(sizeof(mips_instruction));
+	instruction->operation = "";
+	/* Comment moved into a special operand */
+	instruction->comment = "";
+	instruction->operand1_type = OT_COMMENT;
+	instruction->operand2_type = OT_UNSET;
+	instruction->operand3_type = OT_UNSET;		
+	instruction->operand1 = comment;
+	/* Set indentation for printing */
+	instruction->indent_count = indent_count;	
+	instruction->next = NULL;	
 	return instruction;
 }
 
