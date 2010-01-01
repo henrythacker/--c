@@ -364,7 +364,7 @@ void write_code(tac_quad *quad) {
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($fp), make_offset_operand($s0, frame_size - 4), NULL, "Load previous frame ptr", 1));
 			/* Load previous heap pointer */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s0), make_offset_operand($s0, frame_size - 8), NULL, "Load static link", 1));
-			append_mips(mips("j", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "Jump to $ra", 1));
+			append_mips(mips("jr", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "Jump to $ra", 1));
 			break;
 		case TT_RETURN:
 			/* Save the return value */
@@ -379,7 +379,7 @@ void write_code(tac_quad *quad) {
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($fp), make_offset_operand($s0, frame_size - 4), NULL, "Load previous frame ptr", 1));
 			/* Load previous heap pointer */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s0), make_offset_operand($s0, frame_size - 8), NULL, "Load static link", 1));
-			append_mips(mips("j", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "Jump to $ra", 1));
+			append_mips(mips("jr", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "Jump to $ra", 1));
 			break;
 		default:
 			printf("", quad->type);
