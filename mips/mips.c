@@ -382,7 +382,7 @@ void write_code(tac_quad *quad) {
 			append_mips(mips("jr", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "Jump to $ra", 1));
 			break;
 		default:
-			printf("", quad->type);
+			fatal("Unrecognised TAC quad");
 			break;
 	}
 	write_code(quad->next);
