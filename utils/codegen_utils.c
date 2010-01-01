@@ -122,6 +122,10 @@ mips_instruction *mips(char *operation, int op1type, int op2type, int op3type, o
 	return instruction;
 }
 
+mips_instruction *syscall(char *comment) {
+ return mips("", OT_ZERO_ADDRESS, OT_UNSET, OT_UNSET, make_label_operand("syscall"), NULL, NULL, comment, 1);
+}
+
 /* Generate a pseudo-instruction to hold a comment */
 mips_instruction *mips_comment(operand *comment, int indent_count) {
 	mips_instruction *instruction = (mips_instruction *)malloc(sizeof(mips_instruction));

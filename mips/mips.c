@@ -54,14 +54,14 @@ void write_epilogue() {
 	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($a0), make_register_operand($v0), NULL, "Retrieve the return value of the main function", 1));
 	/* Print the int */
 	append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($v0), make_constant_operand(1), NULL, "Print integer", 1));
-	append_mips(mips("", OT_ZERO_ADDRESS, OT_UNSET, OT_UNSET, make_label_operand("syscall"), NULL, NULL, "", 1));	
+	append_mips(syscall(""));	
 	/* Print an EOL character */
 	append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($v0), make_constant_operand(4), NULL, "Print string", 1));
 	append_mips(mips("la", OT_REGISTER, OT_LABEL, OT_UNSET, make_register_operand($a0), make_label_operand("EOL"), NULL, "Printing EOL character", 1));
-	append_mips(mips("", OT_ZERO_ADDRESS, OT_UNSET, OT_UNSET, make_label_operand("syscall"), NULL, NULL, "", 1));	
+	append_mips(syscall(""));
 	/* Sys exit */
 	append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($v0), make_constant_operand(10), NULL, "System exit", 1));
-	append_mips(mips("", OT_ZERO_ADDRESS, OT_UNSET, OT_UNSET, make_label_operand("syscall"), NULL, NULL, "", 1));
+	append_mips(syscall(""));
 }
 
 /* Initialise our global view of register allocation */
@@ -156,17 +156,15 @@ int activation_record_size(int local_size) {
 /* Make the activation record structure, store the address of the created structure into the destination_reg */
 int generate_activation_record(int local_size) {
 	int allocation_size = activation_record_size(local_size);
-	/* TO DO: Move aside whatever is in $a0, $v0 */
-	printf("\tmove $s1, $a0 # Backup $a0\n");
-	printf("\tmove $s2, $v0 # Backup $v0\n");	
-	printf("\tli $a0, %d # Allocation size for activation record\n", allocation_size);
-	printf("\tli $v0, 9 # Allocate space systemcode\n");
-	printf("\tsyscall # Allocate space on heap\n");
-	/* Move result */
-	printf("\tmove $s0, $v0 # Save activation record address\n");
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($s1), make_register_operand($a0), NULL, "Backup $a0", 1));
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($s2), make_register_operand($v0), NULL, "Backup $v0", 1));
+	append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($a0), make_constant_operand(allocation_size), NULL, "Allocation size for activation record", 1));
+	append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($v0), make_constant_operand(9), NULL, "Allocate space systemcode", 1));
+	append_mips(syscall("Allocate space on heap"));
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($s0), make_register_operand($v0), NULL, "Save address of newly allocated AR", 1));
 	/* TO DO: Restore whatever was in $a0, $v0 */
-	printf("\tmove $a0, $s1 # Restore $a0\n");
-	printf("\tmove $v0, $s2 # Restore $v0\n");
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($a0), make_register_operand($s1), NULL, "Restore $a0", 1));
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($s2), NULL, "Restore $v0", 1));	
 	return allocation_size;
 }
 
@@ -187,7 +185,7 @@ int which_register(value *var, int must_already_exist) {
 	if (is_constant(var)) {
 		/* Special zero register */
 		if (to_int(NULL, var)==0) return 0;
-		printf("\tli %s, %s # Load constant into freed register\n", register_name(reg_id), correct_string_rep(var));
+		append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand(reg_id), make_constant_operand(to_int(NULL, var)), NULL, "Load constant into freed register", 1));
 		regs[reg_id]->contents = var;	
 	}
 	return reg_id;
@@ -203,19 +201,22 @@ void cg_operation(int operation, value *op1, value *op2, value *result) {
 	regs[op2_reg]->contents = op2;		
 	switch(operation) {
 		case '+':
-			printf("\tadd %s, %s, %s\n", register_name(result_reg), register_name(op1_reg), register_name(op2_reg));
+			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "", 1));
 			break;
 		case '-':
-			printf("\tsub %s, %s, %s\n", register_name(result_reg), register_name(op1_reg), register_name(op2_reg));
+			append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "", 1));
 			break;
 		case '*':
-			printf("\tmult %s, %s\n\tmflo %s\n", register_name(op1_reg), register_name(op2_reg), register_name(result_reg));
+			append_mips(mips("mul", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(op1_reg), make_register_operand(op2_reg), NULL, "", 1));
+			append_mips(mips("mflo", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand(result_reg), NULL, NULL, "", 1));			
 			break;	
 		case '/':
-			printf("\tdiv %s, %s\n\tmflo %s\n", register_name(op1_reg), register_name(op2_reg), register_name(result_reg));
+			append_mips(mips("div", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(op1_reg), make_register_operand(op2_reg), NULL, "", 1));
+			append_mips(mips("mflo", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand(result_reg), NULL, NULL, "", 1));
 			break;
 		case '%':
-			printf("\tdiv %s, %s\n\tmfhi %s\n", register_name(op1_reg), register_name(op2_reg), register_name(result_reg));
+			append_mips(mips("div", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(op1_reg), make_register_operand(op2_reg), NULL, "", 1));
+			append_mips(mips("mfhi", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand(result_reg), NULL, NULL, "", 1));
 			break;
 	}
 }
@@ -228,7 +229,7 @@ void cg_push_param(value *operand, int param_number) {
 	else {
 		/* TO DO: If value is not empty, save it in current frame */
 		int operand_reg = which_register(operand, 1);
-		printf("\tmove $a%d, %s # Push operand %d\n", param_number, register_name(operand_reg), param_number + 1);
+		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($a0 + param_number), make_register_operand(operand_reg), NULL, "Push operand", 1));
 	}
 }
 
@@ -254,20 +255,21 @@ void cg_assign(value *result, value *operand1) {
 	regs[result_reg]->contents = result;	
 	int op1_reg = which_register(operand1, 1);
 	regs[op1_reg]->contents = operand1;
-	printf("\tmove %s, %s\n", register_name(result_reg), register_name(op1_reg));
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(result_reg), make_register_operand(op1_reg), NULL, "", 1));
 }
 
 /* Code generate an IF statement */
 void cg_if(value *condition, value *true_label) {
 	int condition_register = which_register(condition, 1);
-	printf("\tbne %s, $0, %s\n", register_name(condition_register), correct_string_rep(true_label));
+	append_mips(mips("bne", OT_REGISTER, OT_REGISTER, OT_LABEL, make_register_operand(condition_register), make_register_operand($zero), make_label_operand(correct_string_rep(true_label)), "", 1));
 }
 
 /* Code generate a fn call */
 void cg_fn_call(value *result, value *fn_def) {
 	int result_reg = which_register(result, 0);
 	regs[result_reg]->contents = result;	
-	printf("\tjal _%s\n\tmove %s, $v0\n", correct_string_rep(fn_def), register_name(result_reg));
+	append_mips(mips("jal", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("_%s", correct_string_rep(fn_def)), NULL, NULL, "", 1));
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(result_reg), make_register_operand($v0), NULL, "", 1));
 }
 
 /* Write out code */
