@@ -13,18 +13,25 @@ int is_constant(value *var) {
 	return var && !var->temporary && var->value_type == VT_INTEGR && var->identifier[0]=='_';
 }
 
+/* Write stub fn to call into the user code and return the value */
 void write_epilogue() {
 	tac_quad *quad = entry_point;
 	if (!entry_point) return;
-	printf("main:\n");
-	printf("\tjal _main\n");
-	printf("\tmove $a0, $v0\n");
-	/* Print result */
-	printf("\tli $v0, 1\n\tsyscall\n");
-	/* Print newline */
-	printf("\tli $v0, 4\n\tla $a0, EOL\n\tsyscall\n");	
-	/* Exit */
-	printf("\tli $v0, 10\n\tsyscall\n");
+	/* Call the _main fn */
+	append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("main"), NULL, NULL, "", 0));
+	append_mips(mips("jal", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("_main"), NULL, NULL, "", 1));
+	/* Get hold of the return value */
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($a0), make_register_operand($v0), NULL, "Retrieve the return value of the main function", 1));
+	/* Print the int */
+	append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($v0), make_constant_operand(1), NULL, "Print integer", 1));
+	append_mips(mips("", OT_ZERO_ADDRESS, OT_UNSET, OT_UNSET, make_label_operand("syscall"), NULL, NULL, "", 1));	
+	/* Print an EOL character */
+	append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($v0), make_constant_operand(4), NULL, "Print string", 1));
+	append_mips(mips("la", OT_REGISTER, OT_LABEL, OT_UNSET, make_register_operand($a0), make_label_operand("EOL"), NULL, "Printing EOL character", 1));
+	append_mips(mips("", OT_ZERO_ADDRESS, OT_UNSET, OT_UNSET, make_label_operand("syscall"), NULL, NULL, "", 1));	
+	/* Sys exit */
+	append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($v0), make_constant_operand(10), NULL, "System exit", 1));
+	append_mips(mips("", OT_ZERO_ADDRESS, OT_UNSET, OT_UNSET, make_label_operand("syscall"), NULL, NULL, "", 1));
 }
 
 /* Initialise our global view of register allocation */
@@ -361,23 +368,6 @@ void append_mips(struct mips_instruction *ins) {
 	}
 }
 
-void test() {
-	
-	append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("main"), NULL, NULL, "", 0));
-	append_mips(mips("jal", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("_main"), NULL, NULL, "", 1));
-	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($a0), make_register_operand($v0), NULL, "Retrieve the return value of the main function", 1));
-	printf("main:\n");
-	printf("\tjal _main\n");
-	printf("\tmove $a0, $v0\n");
-	/* Print result */
-	printf("\tli $v0, 1\n\tsyscall\n");
-	/* Print newline */
-	printf("\tli $v0, 4\n\tla $a0, EOL\n\tsyscall\n");	
-	/* Exit */
-	printf("\tli $v0, 10\n\tsyscall\n");
-	print_mips(instructions);
-}
-
 /* Generate MIPS code for given tree */
 void code_gen(NODE *tree) {
 	regs = (register_contents **) malloc(sizeof(register_contents *) * REG_COUNT);
@@ -388,6 +378,6 @@ void code_gen(NODE *tree) {
 	write_code(quad);
 	/* Write out inner fns separately */
 	write_code(pending_code);
-	write_epilogue();
-	test();
+	write_epilogue();	
+	print_mips(instructions);
 }

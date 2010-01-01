@@ -80,7 +80,7 @@ void print_mips(mips_instruction *instructions) {
 	/* Check to see if we have a label by itself - i.e. a label definition */
 	if (instructions->operation && strlen(instructions->operation) == 0 && instructions->operand1_type != OT_UNSET && instructions->operand2_type == OT_UNSET && instructions->operand3_type == OT_UNSET) {
 		print_mips_operand(instructions, 1);
-		printf(":");
+		if (instructions->operand1_type != OT_ZERO_ADDRESS) printf(":");
 	}
 	else {
 		printf("%s ", instructions->operation);
