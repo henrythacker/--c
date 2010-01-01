@@ -345,6 +345,39 @@ void write_code(tac_quad *quad) {
 	write_code(quad->next);
 }
 
+/* Append MIPS code to generated code stack */
+void append_mips(struct mips_instruction *ins) {
+	/* Are there any existing instructions? */
+	if (!instructions) {
+		instructions = ins;
+	}
+	else {
+		struct mips_instruction *tmp_instruction = instructions;
+		while (tmp_instruction->next != NULL) {
+			tmp_instruction = tmp_instruction->next;
+		}
+		/* Append instruction onto the end */
+		tmp_instruction->next = ins;
+	}
+}
+
+void test() {
+	
+	append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("main"), NULL, NULL, "", 0));
+	append_mips(mips("jal", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("_main"), NULL, NULL, "", 1));
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($a0), make_register_operand($v0), NULL, "Retrieve the return value of the main function", 1));
+	printf("main:\n");
+	printf("\tjal _main\n");
+	printf("\tmove $a0, $v0\n");
+	/* Print result */
+	printf("\tli $v0, 1\n\tsyscall\n");
+	/* Print newline */
+	printf("\tli $v0, 4\n\tla $a0, EOL\n\tsyscall\n");	
+	/* Exit */
+	printf("\tli $v0, 10\n\tsyscall\n");
+	print_mips(instructions);
+}
+
 /* Generate MIPS code for given tree */
 void code_gen(NODE *tree) {
 	regs = (register_contents **) malloc(sizeof(register_contents *) * REG_COUNT);
@@ -356,4 +389,5 @@ void code_gen(NODE *tree) {
 	/* Write out inner fns separately */
 	write_code(pending_code);
 	write_epilogue();
+	test();
 }

@@ -28,6 +28,9 @@ tac_quad *entry_point;
 /* Store pending code that can't be processed immediately */
 tac_quad *pending_code;
 
+/* Location that code is written to */
+mips_instruction *instructions;
+
 typedef struct register_contents {
 	value *contents; /* Value stored in the register */
 	int accesses; /* How many times the value has been referenced */
