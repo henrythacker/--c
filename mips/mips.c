@@ -310,29 +310,29 @@ void write_code(tac_quad *quad) {
 			/* Get a place to store the old $s0 - i.e. static link */
 			temporary = choose_best_reg();
 			size = to_int(NULL, quad->operand1);
-			printf("\tmove %s, $s0\n", register_name(temporary));
+			append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(temporary), make_register_operand($s0), NULL, "", 1));
 			size = generate_activation_record(size);
 			frame_size = size;
 			/* Store frame pointer */
-			printf("\tsw $fp, %d($s0) # Save previous frame ptr\n", size - 4);
+			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($fp), make_offset_operand($s0, size-4), NULL, "Save previous frame ptr", 1));
 			/* Store static link AFTER frame pointer */
-			printf("\tsw %s, %d($s0) # Save static link\n", register_name(temporary), size - 8);
+			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(temporary), make_offset_operand($s0, size-8), NULL, "Save static link", 1));
 			break;
 		case TT_BEGIN_FN:
 			if (strcmp(correct_string_rep(quad->operand1), "main")==0) entry_point = quad;
-			printf("_%s:\n", correct_string_rep(quad->operand1));
-			printf("\tadd $sp, $sp, 4\n");
-			printf("\tsw $ra, 0($sp)\n");
+			append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("_%s", correct_string_rep(quad->operand1)), NULL, NULL, "", 0));
+			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "", 1));
+			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "", 1));
 			param_number = -1;
 			break;
 		case TT_GOTO:
-			printf("\tj %s\n", correct_string_rep(quad->operand1));
+			append_mips(mips("j", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand(correct_string_rep(quad->operand1)), NULL, NULL, "", 1));
 			break;
 		case TT_POP_PARAM:
 			cg_pop_param(quad->operand1, ++param_number);
 			break;
 		case TT_LABEL:
-			printf("%s:\n", correct_string_rep(quad->operand1));		
+			append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand(correct_string_rep(quad->operand1)), NULL, NULL, "", 0));
 			break;
 		case TT_ASSIGN:
 			cg_assign(quad->result, quad->operand1);
@@ -357,29 +357,29 @@ void write_code(tac_quad *quad) {
 		case TT_END_FN:
 			nesting_level--;		
 			/* Load return address from stack */
-			printf("\tlw $ra, 0($sp) # Get return address\n");
-			printf("\tsub $sp, $sp, 4 # Pop return address from stack\n");
-			printf("\tmove $v0, $0 # Null return value\n");
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Get return address", 1));
+			append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "Pop return address from stack", 1));
+			append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($zero), NULL, "Null return value", 1));
 			/* Load previous frame pointer */
-			printf("\tlw $fp, %d($s0) # Load previous frame ptr\n", frame_size - 4);
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($fp), make_offset_operand($s0, frame_size - 4), NULL, "Load previous frame ptr", 1));
 			/* Load previous heap pointer */
-			printf("\tlw $s0, %d($s0) # Load static link\n", frame_size - 8);
-			printf("\tjr $ra # Jump to $ra\n");
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s0), make_offset_operand($s0, frame_size - 8), NULL, "Load static link", 1));
+			append_mips(mips("j", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "Jump to $ra", 1));
 			break;
 		case TT_RETURN:
 			/* Save the return value */
 			/* Restore the activation record */
 			if (quad->operand1) {
-				printf("\tmove $v0, %s # Set return value\n", register_name(which_register(quad->operand1, 1)));
+				append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand(which_register(quad->operand1, 1)), NULL, "Set return value", 1));
 			}
-			/* Load previous return address from stack */
-			printf("\tlw $ra, 0($sp) # Get return address\n");
-			printf("\tsub $sp, $sp, 4 # Pop return address from stack\n");
+			/* Load return address from stack */
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Get return address", 1));
+			append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "Pop return address from stack", 1));
 			/* Load previous frame pointer */
-			printf("\tlw $fp, %d($s0) # Load previous frame ptr\n", frame_size - 4);
-			/* Load previous "heap" pointer */
-			printf("\tlw $s0, %d($s0) # Load static link\n", frame_size - 8);
-			printf("\tjr $ra # Jump to $ra\n");
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($fp), make_offset_operand($s0, frame_size - 4), NULL, "Load previous frame ptr", 1));
+			/* Load previous heap pointer */
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s0), make_offset_operand($s0, frame_size - 8), NULL, "Load static link", 1));
+			append_mips(mips("j", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "Jump to $ra", 1));
 			break;
 		default:
 			printf("", quad->type);
