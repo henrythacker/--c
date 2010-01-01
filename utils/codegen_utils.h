@@ -62,5 +62,6 @@ operand *make_register_operand(int);
 operand *make_offset_operand();
 operand *make_constant_operand(int);
 operand *make_label_operand(char *, ...);
+char *register_name(enum sys_register);
 
 #endif

@@ -16,6 +16,16 @@ void append_mips(struct mips_instruction *ins) {
 	}
 }
 
+/* Valid register - can the USER utilise the given register? */
+int register_use_allowed(int reg_id) {
+	/* can use all the $t* registers */
+	return (reg_id >= 8 && reg_id <= 15) || (reg_id >= 24 && reg_id <= 25);
+}
+
+int is_argument_register(int reg_id) {
+	return reg_id >= $a0 && reg_id <= $a3;
+}
+
 /* Write header into source */
 void write_preamble() {
 	operand *comment;
@@ -58,31 +68,30 @@ void write_epilogue() {
 void init_register_view() {
 	int i;
 	for (i = 0; i < REG_COUNT; i++) {
-		char *reg_prefix = i == 0 ? "" : (i < 5 ? "a" : "t");
-		int reg_count = i == 0 ? 0 : (i > 4 ? i - 5 : i - 1);
 		regs[i] = (register_contents *) malloc(sizeof(register_contents));
 		regs[i]->contents = NULL;
 		regs[i]->accesses = 0;
 		regs[i]->assignment_id = 0;
-		regs[i]->name = malloc(sizeof(char) * 4);
-		sprintf(regs[i]->name, "$%s%d", reg_prefix, reg_count);
 	}
 }
 
 /* Print the view of the registers */
 void print_register_view() {
 	int i;
+	if (!DEBUG_ON) return;
 	printf("Register View\n---------------\n");
 	for (i = 0; i < REG_COUNT; i++) {
-		printf("[%s] \t- Contents: [%p - %s] - Accesses: %d - Assignment order: %d\n", regs[i]->name, regs[i]->contents, regs[i]->contents ? regs[i]->contents->identifier : "EMPTY", regs[i]->accesses, regs[i]->assignment_id);
+		if (register_use_allowed(i) || is_argument_register(i)) {
+			printf("[%s] \t- Contents: [%p - %s] - Accesses: %d - Assignment order: %d\n", register_name(i), regs[i]->contents, regs[i]->contents ? regs[i]->contents->identifier : "EMPTY", regs[i]->accesses, regs[i]->assignment_id);
+		}
 	}
 }
 
 /* Find the first free register, if any */
 int first_free_reg() {
-	int position = 5;
-	for (position = 5; position < REG_COUNT; position++) {
-		if (!regs[position]->contents) {
+	int position = 0;
+	for (position = 0; position < REG_COUNT; position++) {
+		if (register_use_allowed(position) && !regs[position]->contents) {
 			regs[position]->assignment_id = ++regs_assignments;			
 			regs[position]->contents = NULL;
 			regs[position]->accesses = 1;			
@@ -96,13 +105,15 @@ int first_free_reg() {
 int choose_best_reg() {
 	int free_reg = first_free_reg();
 	if (free_reg == REG_NONE_FREE) {
-		int position = 5;
+		int position = 0;
 		int lowest_assignment_order = -1;
 		int optimal_reg = -1;
-		for (position = 5; position < REG_COUNT; position++) {
-			if (lowest_assignment_order == -1 || regs[position]->assignment_id < lowest_assignment_order) {
-				lowest_assignment_order = regs[position]->assignment_id;
-				optimal_reg = position;
+		for (position = 0; position < REG_COUNT; position++) {
+			if (register_use_allowed(position)) {
+				if (lowest_assignment_order == -1 || regs[position]->assignment_id < lowest_assignment_order) {
+					lowest_assignment_order = regs[position]->assignment_id;
+					optimal_reg = position;
+				}
 			}
 		}
 		/* TO DO: Move out existing value into heap */
@@ -119,11 +130,14 @@ int already_in_reg(value *var) {
 	int position = 0;
 	for (position = 0; position < REG_COUNT; position++) {
 		/* Point to same variable OR are equivalent constants */
-		if (regs[position]->contents == var || (is_constant(var) && regs[position]->contents && is_constant(regs[position]->contents) && to_int(NULL, var) == to_int(NULL, regs[position]->contents))) {
-			/* Increment accesses to track how popular this register is */
-			regs[position]->accesses = regs[position]->accesses + 1;
-			regs[position]->assignment_id = ++regs_assignments;			
-			return position;
+		/* Must be sourced from a user accessible register, or the special zero register */
+		if (register_use_allowed(position) || position == 0 || is_argument_register(position)) {
+			if (regs[position]->contents == var || (is_constant(var) && regs[position]->contents && is_constant(regs[position]->contents) && to_int(NULL, var) == to_int(NULL, regs[position]->contents))) {
+				/* Increment accesses to track how popular this register is */
+				regs[position]->accesses = regs[position]->accesses + 1;
+				regs[position]->assignment_id = ++regs_assignments;			
+				return position;
+			}
 		}
 	}
 	return REG_VALUE_NOT_AVAILABLE;
@@ -173,7 +187,7 @@ int which_register(value *var, int must_already_exist) {
 	if (is_constant(var)) {
 		/* Special zero register */
 		if (to_int(NULL, var)==0) return 0;
-		printf("\tli %s, %s # Load constant into freed register\n", regs[reg_id]->name, correct_string_rep(var));
+		printf("\tli %s, %s # Load constant into freed register\n", register_name(reg_id), correct_string_rep(var));
 		regs[reg_id]->contents = var;	
 	}
 	return reg_id;
@@ -189,19 +203,19 @@ void cg_operation(int operation, value *op1, value *op2, value *result) {
 	regs[op2_reg]->contents = op2;		
 	switch(operation) {
 		case '+':
-			printf("\tadd %s, %s, %s\n", regs[result_reg]->name, regs[op1_reg]->name, regs[op2_reg]->name);
+			printf("\tadd %s, %s, %s\n", register_name(result_reg), register_name(op1_reg), register_name(op2_reg));
 			break;
 		case '-':
-			printf("\tsub %s, %s, %s\n", regs[result_reg]->name, regs[op1_reg]->name, regs[op2_reg]->name);
+			printf("\tsub %s, %s, %s\n", register_name(result_reg), register_name(op1_reg), register_name(op2_reg));
 			break;
 		case '*':
-			printf("\tmult %s, %s\n\tmflo %s\n", regs[op1_reg]->name, regs[op2_reg]->name, regs[result_reg]->name);
+			printf("\tmult %s, %s\n\tmflo %s\n", register_name(op1_reg), register_name(op2_reg), register_name(result_reg));
 			break;	
 		case '/':
-			printf("\tdiv %s, %s\n\tmflo %s\n", regs[op1_reg]->name, regs[op2_reg]->name, regs[result_reg]->name);
+			printf("\tdiv %s, %s\n\tmflo %s\n", register_name(op1_reg), register_name(op2_reg), register_name(result_reg));
 			break;
 		case '%':
-			printf("\tdiv %s, %s\n\tmfhi %s\n", regs[op1_reg]->name, regs[op2_reg]->name, regs[result_reg]->name);
+			printf("\tdiv %s, %s\n\tmfhi %s\n", register_name(op1_reg), register_name(op2_reg), register_name(result_reg));
 			break;
 	}
 }
@@ -214,7 +228,7 @@ void cg_push_param(value *operand, int param_number) {
 	else {
 		/* TO DO: If value is not empty, save it in current frame */
 		int operand_reg = which_register(operand, 1);
-		printf("\tmove $a%d, %s # Push operand %d\n", param_number, regs[operand_reg]->name, param_number + 1);
+		printf("\tmove $a%d, %s # Push operand %d\n", param_number, register_name(operand_reg), param_number + 1);
 	}
 }
 
@@ -224,7 +238,7 @@ void cg_pop_param(value *operand, int param_number) {
 		/* TO DO: Load from end of heap */
 	}
 	else {
-		int index = param_number + 1;
+		int index = $a0 + param_number;
 		if (regs[index]->contents) {
 			/* TO DO: Backup existing value */
 		}
@@ -240,20 +254,20 @@ void cg_assign(value *result, value *operand1) {
 	regs[result_reg]->contents = result;	
 	int op1_reg = which_register(operand1, 1);
 	regs[op1_reg]->contents = operand1;
-	printf("\tmove %s, %s\n", regs[result_reg]->name, regs[op1_reg]->name);
+	printf("\tmove %s, %s\n", register_name(result_reg), register_name(op1_reg));
 }
 
 /* Code generate an IF statement */
 void cg_if(value *condition, value *true_label) {
 	int condition_register = which_register(condition, 1);
-	printf("\tbne %s, $0, %s\n", regs[condition_register]->name, correct_string_rep(true_label));
+	printf("\tbne %s, $0, %s\n", register_name(condition_register), correct_string_rep(true_label));
 }
 
 /* Code generate a fn call */
 void cg_fn_call(value *result, value *fn_def) {
 	int result_reg = which_register(result, 0);
 	regs[result_reg]->contents = result;	
-	printf("\tjal _%s\n\tmove %s, $v0\n", correct_string_rep(fn_def), regs[result_reg]->name);
+	printf("\tjal _%s\n\tmove %s, $v0\n", correct_string_rep(fn_def), register_name(result_reg));
 }
 
 /* Write out code */
@@ -294,13 +308,13 @@ void write_code(tac_quad *quad) {
 			/* Get a place to store the old $s0 - i.e. static link */
 			temporary = choose_best_reg();
 			size = to_int(NULL, quad->operand1);
-			printf("\tmove %s, $s0\n", regs[temporary]->name);
+			printf("\tmove %s, $s0\n", register_name(temporary));
 			size = generate_activation_record(size);
 			frame_size = size;
 			/* Store frame pointer */
 			printf("\tsw $fp, %d($s0) # Save previous frame ptr\n", size - 4);
 			/* Store static link AFTER frame pointer */
-			printf("\tsw %s, %d($s0) # Save static link\n", regs[temporary]->name, size - 8);
+			printf("\tsw %s, %d($s0) # Save static link\n", register_name(temporary), size - 8);
 			break;
 		case TT_BEGIN_FN:
 			if (strcmp(correct_string_rep(quad->operand1), "main")==0) entry_point = quad;
@@ -354,7 +368,7 @@ void write_code(tac_quad *quad) {
 			/* Save the return value */
 			/* Restore the activation record */
 			if (quad->operand1) {
-				printf("\tmove $v0, %s # Set return value\n", regs[which_register(quad->operand1, 1)]->name);
+				printf("\tmove $v0, %s # Set return value\n", register_name(which_register(quad->operand1, 1)));
 			}
 			/* Load previous return address from stack */
 			printf("\tlw $ra, 0($sp) # Get return address\n");
