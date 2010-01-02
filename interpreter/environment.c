@@ -17,6 +17,13 @@ environment *create_environment(environment *static_link) {
 	/* Assign static link ptr */
 	new_environment->static_link = static_link;
 	new_environment->env_size = 0;
+	/* Record how nested this environment is */
+	if (!static_link) {
+		new_environment->nested_level = 0;
+	}
+	else {
+		new_environment->nested_level = static_link->nested_level + 1;
+	}
 	return new_environment;
 }
 
@@ -140,7 +147,7 @@ void debug_environment(environment *env) {
 		int i = 0;
 		printf("---------\n");
 		printf("Environment: %p\n", env);
-		printf("Static link via: %p\n", env->static_link);
+		printf("Static link via: %p [Nested %d levels deep]\n", env->static_link, env->nested_level);
 		for (i = 0; i < HASH_VALUE_SIZE; i++) {
 			if (env->values[i]) {
 				printf("[%d]:\n", i);

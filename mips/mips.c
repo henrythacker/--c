@@ -47,8 +47,10 @@ int is_constant(value *var) {
 void write_epilogue() {
 	tac_quad *quad = entry_point;
 	if (!entry_point) return;
-	/* Call the _main fn */
+	append_mips(mips("", OT_ZERO_ADDRESS, OT_UNSET, OT_UNSET, make_label_operand(".text"), NULL, NULL, "", 1));
+	append_mips(mips(".globl", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("main"), NULL, NULL, "", 1));	
 	append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("main"), NULL, NULL, "", 0));
+	/* Call the _main fn */
 	append_mips(mips("jal", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("_main"), NULL, NULL, "", 1));
 	/* Get hold of the return value */
 	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($a0), make_register_operand($v0), NULL, "Retrieve the return value of the main function", 1));
@@ -249,13 +251,24 @@ void cg_pop_param(value *operand, int param_number) {
 	}
 }
 
+/* Code generate an assignment to a specific register */
+void cg_assign_to_reg(int reg, value *operand1) {
+	if (operand1->value_type == VT_FUNCTN) {
+		/* Functions require addresses to be loaded */
+		append_mips(mips("la", OT_REGISTER, OT_LABEL, OT_UNSET, make_register_operand(reg), make_label_operand("_%s", correct_string_rep(operand1)), NULL, "", 1));
+	}
+	else {
+		int op1_reg = which_register(operand1, 1);
+		regs[op1_reg]->contents = operand1;
+		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(reg), make_register_operand(op1_reg), NULL, "", 1));
+	}
+}
+
 /* Code generate an assignment */
 void cg_assign(value *result, value *operand1) {
 	int result_reg = which_register(result, 0);
-	regs[result_reg]->contents = result;	
-	int op1_reg = which_register(operand1, 1);
-	regs[op1_reg]->contents = operand1;
-	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(result_reg), make_register_operand(op1_reg), NULL, "", 1));
+	regs[result_reg]->contents = result;
+	cg_assign_to_reg(result_reg, operand1);
 }
 
 /* Code generate an IF statement */
@@ -278,6 +291,8 @@ void write_code(tac_quad *quad) {
 	static int param_number = -1;
 	static int frame_size = 0;
 	static int nesting_level = -1;
+	static value *current_fn = NULL;
+	int depth_difference = 0;
 	int size = 0;
 	int temporary;
 	if (!quad) return;
@@ -307,19 +322,20 @@ void write_code(tac_quad *quad) {
 			nesting_level++;
 			break;
 		case TT_INIT_FRAME:
-			/* Get a place to store the old $s0 - i.e. static link */
-			temporary = choose_best_reg();
 			size = to_int(NULL, quad->operand1);
-			append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(temporary), make_register_operand($s0), NULL, "", 1));
 			size = generate_activation_record(size);
 			frame_size = size;
-			/* Store frame pointer */
+			/* Store old frame pointer */
 			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($fp), make_offset_operand($s0, size-4), NULL, "Save previous frame ptr", 1));
 			/* Store static link AFTER frame pointer */
-			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(temporary), make_offset_operand($s0, size-8), NULL, "Save static link", 1));
+			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, size-8), NULL, "Save static link passed in $v0", 1));
+			/* Move the $fp to point to the start of the record */
+			append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($fp), make_register_operand($s0), NULL, "Set the $fp to point at the end of the record", 1));
+			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($fp), make_register_operand($fp), make_constant_operand(frame_size), "Set the $fp to point at the START of the record", 1));
 			break;
 		case TT_BEGIN_FN:
 			if (strcmp(correct_string_rep(quad->operand1), "main")==0) entry_point = quad;
+			current_fn = quad->operand1;
 			append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("_%s", correct_string_rep(quad->operand1)), NULL, NULL, "", 0));
 			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "", 1));
 			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "", 1));
@@ -350,8 +366,17 @@ void write_code(tac_quad *quad) {
 			cg_operation(quad->subtype, quad->operand1, quad->operand2, quad->result);
 			break;
 		case TT_FN_CALL:
-			// Reset param count
+			/* Reset param count */
 			param_number = -1;
+			/* Work out what static link to pass */
+			depth_difference = current_fn->stored_in_env->nested_level - quad->operand1->stored_in_env->nested_level;
+			/*
+			* If depth_difference:
+			*	is 0 - pass in the same static link that we have in our current activation record (look up -8($s0))
+			*	is 1 - pass in the current $fp
+			*	otherwise - traverse this number of stack frames (lw $temp, -8($s0) depth difference amount of times, then move to $v0)
+			*/ 
+			fatal("");
 			cg_fn_call(quad->result, quad->operand1);			
 			break;
 		case TT_END_FN:
@@ -362,15 +387,13 @@ void write_code(tac_quad *quad) {
 			append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($zero), NULL, "Null return value", 1));
 			/* Load previous frame pointer */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($fp), make_offset_operand($s0, frame_size - 4), NULL, "Load previous frame ptr", 1));
-			/* Load previous heap pointer */
-			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s0), make_offset_operand($s0, frame_size - 8), NULL, "Load static link", 1));
 			append_mips(mips("jr", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "Jump to $ra", 1));
 			break;
 		case TT_RETURN:
 			/* Save the return value */
 			/* Restore the activation record */
 			if (quad->operand1) {
-				append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand(which_register(quad->operand1, 1)), NULL, "Set return value", 1));
+				cg_assign_to_reg($v0, quad->operand1);
 			}
 			/* Load return address from stack */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Get return address", 1));

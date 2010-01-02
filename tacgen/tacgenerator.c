@@ -354,12 +354,12 @@ void register_variable_subtree_tac(environment *env, NODE *node, int return_type
 */
 value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 	int i_value = 0;
-	char *s_tmp;
-	value *val1, *val2, *temporary, *temp;
+	char *s_tmp = NULL;
+	value *val1 = NULL, *val2 = NULL, *temporary = NULL, *temp = NULL;
 	static int if_count = 0;
 	static int while_count = 0;	
-	tac_quad *temp_quad;
-	environment *new_env;
+	tac_quad *temp_quad = NULL;
+	environment *new_env = NULL;
 	if (node==NULL) return NULL;
 	switch(type_of(node)) {
 		case LEAF: 
@@ -535,7 +535,7 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 						temporary = generate_untypechecked_temporary(env);
 						break;
 				}
-				append_code(make_fn_call(temporary, val1));
+				append_code(make_fn_call(temporary, temp));
 				return temporary;
 			}
 			else {

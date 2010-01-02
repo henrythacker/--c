@@ -56,6 +56,7 @@ typedef struct environment {
 	int env_size;
 	struct value **values;
 	struct environment *static_link;
+	int nested_level;
 } environment;
 
 /* Function declaration struct */
