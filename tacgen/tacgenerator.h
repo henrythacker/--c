@@ -15,6 +15,7 @@
 #define TT_POP_PARAM 161
 #define TT_FN_CALL 162
 #define TT_PREPARE 163
+#define TT_FN_BODY 164
 
 #define EMBEDDED_FNS 300
 

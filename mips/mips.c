@@ -212,21 +212,52 @@ void cg_operation(int operation, value *op1, value *op2, value *result, int curr
 	}*/
 }
 
-/* Code generate PUSHING a parameter */
-void cg_push_param(value *operand, int param_number, int current_depth, int frame_size) {
-	/*if (param_number > 4) {
-		// TO DO: Store at end of heap
+
+
+/*
+* VARIABLE STORE FNS
+*/
+
+int cg_find_variable(value *variable, int current_depth, int frame_size) {
+	int reg_id = already_in_reg(variable);
+	if (!variable->stored_in_env) fatal("Could not find variable %s", correct_string_rep(variable));
+	if (reg_id == REG_VALUE_NOT_AVAILABLE) {
+		/* Have to try and load this variable from the activation records */
+		fatal("%s\n", correct_string_rep(variable));
+		//fatal("Looking to try and locate variable: %s, depth: %d, current depth: %d", correct_string_rep(variable), variable->stored_in_env->nested_level, current_depth);
+	}
+	return reg_id;
+}
+
+void cg_store_in_reg(int reg, value *operand, int current_depth, int frame_size) {
+	if (is_constant(operand)) {
+		append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand(reg), make_constant_operand(to_int(NULL, operand)), NULL, "", 1));
 	}
 	else {
-		// TO DO: If value is not empty, save it in current frame
-		int operand_reg = which_register(operand, 1, current_depth, frame_size);
-		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($a0 + param_number), make_register_operand(operand_reg), NULL, "Push operand", 1));
-	}*/
+		int value_reg = cg_find_variable(operand, current_depth, frame_size);
+		/* Make the assignment */
+		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(reg), make_register_operand(value_reg), NULL, "Assign values", 1));	
+	}
+}
+
+/*
+* END VARIABLE STORE FNS
+*/
+
+
+/* Code generate PUSHING a parameter */
+void cg_push_param(value *operand, int current_depth, int frame_size) {
+	cg_store_in_reg($a0, operand, current_depth, frame_size);
+	append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "Move stack pointer", 1));	
+	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($a0), make_offset_operand($sp, 0), NULL, "Write param into stack", 1));
 }
 
 /* Code generate POPPING a parameter */
-void cg_pop_param(value *operand, int param_number) {
-	append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("pop"), NULL, NULL, "", 0));
+void cg_pop_param(value *operand) {
+	int num = operand->variable_number;
+	append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($a0), make_offset_operand($sp, 0), NULL, "Pop the parameter", 1));
+	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($a0), make_offset_operand($fp, -4 * (num + 1)), NULL, "Write param into heap", 1));
+	append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "Move stack pointer", 1));	
 }
 
 /* Code generate an assignment */
@@ -308,6 +339,7 @@ void write_code(tac_quad *quad) {
 	}
 	switch(quad->type) {
 		case TT_FN_DEF:
+			/* Verified: HT */
 			nesting_level++;
 			break;
 		case TT_INIT_FRAME:
@@ -321,21 +353,27 @@ void write_code(tac_quad *quad) {
 			/* Store a reference to activation record address in $s0 */
 			append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($s0), make_register_operand($v0), NULL, "Store heap end address in $s0", 1));
 			break;
+		case TT_FN_BODY:
+			/* Verified: HT */
+			/* Save return address in stack */
+			append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "", 1));
+			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Save return address in stack", 1));
+			break;
 		case TT_BEGIN_FN:
 			/* Verified: HT */
 			if (strcmp(correct_string_rep(quad->operand1), "main")==0) entry_point = quad;
 			current_fn = quad->operand1;
-			/* Save return address in stack */
 			append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("_%s", correct_string_rep(quad->operand1)), NULL, NULL, "", 0));
-			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "", 1));
-			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Save return address in stack", 1));
 			param_number = -1;
 			break;
 		case TT_GOTO:
+			/* Verified: HT */
 			append_mips(mips("j", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand(correct_string_rep(quad->operand1)), NULL, NULL, "", 1));
 			break;
 		case TT_POP_PARAM:
-			cg_pop_param(quad->operand1, ++param_number);
+			/* Verified: HT */
+			++param_number;
+			cg_pop_param(quad->operand1);
 			break;
 		case TT_LABEL:
 			append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand(correct_string_rep(quad->operand1)), NULL, NULL, "", 0));
@@ -344,7 +382,8 @@ void write_code(tac_quad *quad) {
 			cg_assign(quad->result, quad->operand1, current_fn->stored_in_env->nested_level, frame_size);
 			break;
 		case TT_PUSH_PARAM:
-			cg_push_param(quad->operand1, ++param_number, current_fn->stored_in_env->nested_level, frame_size);
+			++param_number;
+			cg_push_param(quad->operand1, current_fn->stored_in_env->nested_level, frame_size);
 			break;
 		case TT_PREPARE:
 			param_number = -1;
@@ -367,7 +406,7 @@ void write_code(tac_quad *quad) {
 			nesting_level--;		
 			/* Load return address from stack */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Get return address", 1));
-			append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "Pop return address from stack", 1));
+			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "Pop return address from stack", 1));
 			append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($zero), NULL, "Null return value", 1));
 			/* Load previous frame pointer */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($fp), make_offset_operand($s0, frame_size - 4), NULL, "Load previous frame ptr", 1));
@@ -381,7 +420,7 @@ void write_code(tac_quad *quad) {
 			}
 			/* Load return address from stack */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Get return address", 1));
-			append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "Pop return address from stack", 1));
+			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "Pop return address from stack", 1));
 			/* Load previous frame pointer */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($fp), make_offset_operand($s0, frame_size - 4), NULL, "Load previous frame ptr", 1));
 			/* Load previous heap pointer */
