@@ -226,7 +226,7 @@ void cg_push_param(value *operand, int param_number, int current_depth, int fram
 
 /* Code generate POPPING a parameter */
 void cg_pop_param(value *operand, int param_number) {
-	
+	append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("pop"), NULL, NULL, "", 0));
 }
 
 /* Code generate an assignment */

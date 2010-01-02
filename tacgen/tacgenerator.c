@@ -59,7 +59,7 @@ void print_tac(tac_quad *quad) {
 			printf("PrepareToCall %d\n", param_count(quad->operand1));
 			break;	
 		case TT_BEGIN_FN:
-			printf("BeginFn %d\n", param_count(quad->operand1));
+			printf("BeginFn %s\n", correct_string_rep(quad->operand1));
 			break;
 		case TT_END_FN:
 			printf("EndFn\n");
@@ -457,10 +457,11 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 				/* Write out FN Name label */
 				append_code(make_fn_def(val2));
 				append_code(make_begin_fn(val2));				
-				/* Define parameters with default empty values */
-				register_params(new_env, val2->data.func->params);
+				/* Make init frame */
 				temp_quad = make_init_frame();
 				append_code(temp_quad);
+				/* Define parameters with default empty values */
+				register_params(new_env, val2->data.func->params);
 				/* Look inside fn body */
 				val2 = make_simple(new_env, node->right, EMBEDDED_FNS, val1->data.func->return_type);
 				/* Update prepare frame with environment size */
