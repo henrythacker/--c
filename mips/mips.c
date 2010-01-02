@@ -170,17 +170,45 @@ int generate_activation_record(int local_size) {
 	return allocation_size;
 }
 
+/* Load variable into a temporary register */
+int load_var(value *var, int current_depth, int frame_size) {
+	if (!var || is_constant(var)) return -1;
+	int var_depth = var->stored_in_env->nested_level;
+	int depth = var_depth - current_depth;
+	int reg_id = first_free_reg();
+	if (reg_id == REG_NONE_FREE) {
+		reg_id = choose_best_reg();
+		assert(reg_id!=-1, "Could not free up a register");
+	}	
+	switch(depth) {
+		case 1:
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s3), make_offset_operand($s0, frame_size - 8), NULL, "Load up static link", 1));
+			/* LOAD VARIABLE AS OFFSET FROM $s3 */
+			break;
+		default:
+			fatal("Do not understand how to load variables of nesting depth %d from an environment that is nested %d levels deep", var_depth, current_depth);
+			break;
+	}
+	
+	print_mips(instructions);
+	fatal("");
+	
+}
+
 /* All encompassing register assignment fn */
-int which_register(value *var, int must_already_exist) {
+int which_register(value *var, int must_already_exist, int current_depth, int frame_size) {
 	int reg_id = already_in_reg(var);
 	if (reg_id == REG_VALUE_NOT_AVAILABLE) {
-		if (!is_constant(var) && must_already_exist) {
-			fatal("Could not find value %s", correct_string_rep(var));
-		}
-		reg_id = first_free_reg();
-		if (reg_id == REG_NONE_FREE) {
-			reg_id = choose_best_reg();
-			assert(reg_id!=-1, "Could not free up a register");
+		reg_id = load_var(var, current_depth, frame_size);
+		if (reg_id == -1) {
+			if (!is_constant(var) && must_already_exist) {
+				fatal("Could not find value %s", correct_string_rep(var));
+			}
+			reg_id = first_free_reg();
+			if (reg_id == REG_NONE_FREE) {
+				reg_id = choose_best_reg();
+				assert(reg_id!=-1, "Could not free up a register");
+			}
 		}
 	}
 	/* Load constants into the freed register, if applicable */
@@ -194,12 +222,12 @@ int which_register(value *var, int must_already_exist) {
 }
 
 /* Generate code for an operation */
-void cg_operation(int operation, value *op1, value *op2, value *result) {
-	int result_reg = which_register(result, 0);
+void cg_operation(int operation, value *op1, value *op2, value *result, int current_depth, int frame_size) {
+	int result_reg = which_register(result, 0, current_depth, frame_size);
 	regs[result_reg]->contents = result;	
-	int op1_reg = which_register(op1, 1);
+	int op1_reg = which_register(op1, 1, current_depth, frame_size);
 	regs[op1_reg]->contents = op1;	
-	int op2_reg = which_register(op2, 1);	
+	int op2_reg = which_register(op2, 1, current_depth, frame_size);	
 	regs[op2_reg]->contents = op2;		
 	switch(operation) {
 		case '+':
@@ -224,13 +252,13 @@ void cg_operation(int operation, value *op1, value *op2, value *result) {
 }
 
 /* Code generate PUSHING a parameter */
-void cg_push_param(value *operand, int param_number) {
+void cg_push_param(value *operand, int param_number, int current_depth, int frame_size) {
 	if (param_number > 4) {
 		/* TO DO: Store at end of heap */
 	}
 	else {
 		/* TO DO: If value is not empty, save it in current frame */
-		int operand_reg = which_register(operand, 1);
+		int operand_reg = which_register(operand, 1, current_depth, frame_size);
 		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($a0 + param_number), make_register_operand(operand_reg), NULL, "Push operand", 1));
 	}
 }
@@ -252,37 +280,62 @@ void cg_pop_param(value *operand, int param_number) {
 }
 
 /* Code generate an assignment to a specific register */
-void cg_assign_to_reg(int reg, value *operand1) {
+void cg_assign_to_reg(int reg, value *operand1, int current_depth, int frame_size) {
 	if (operand1->value_type == VT_FUNCTN) {
 		/* Functions require addresses to be loaded */
 		append_mips(mips("la", OT_REGISTER, OT_LABEL, OT_UNSET, make_register_operand(reg), make_label_operand("_%s", correct_string_rep(operand1)), NULL, "", 1));
 	}
 	else {
-		int op1_reg = which_register(operand1, 1);
+		int op1_reg = which_register(operand1, 1, current_depth, frame_size);
 		regs[op1_reg]->contents = operand1;
 		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(reg), make_register_operand(op1_reg), NULL, "", 1));
 	}
 }
 
 /* Code generate an assignment */
-void cg_assign(value *result, value *operand1) {
-	int result_reg = which_register(result, 0);
+void cg_assign(value *result, value *operand1, int current_depth, int frame_size) {
+	int result_reg = which_register(result, 0, current_depth, frame_size);
 	regs[result_reg]->contents = result;
-	cg_assign_to_reg(result_reg, operand1);
+	cg_assign_to_reg(result_reg, operand1, current_depth, frame_size);
 }
 
 /* Code generate an IF statement */
-void cg_if(value *condition, value *true_label) {
-	int condition_register = which_register(condition, 1);
+void cg_if(value *condition, value *true_label, int current_depth, int frame_size) {
+	int condition_register = which_register(condition, 1, current_depth, frame_size);
 	append_mips(mips("bne", OT_REGISTER, OT_REGISTER, OT_LABEL, make_register_operand(condition_register), make_register_operand($zero), make_label_operand(correct_string_rep(true_label)), "", 1));
 }
 
 /* Code generate a fn call */
-void cg_fn_call(value *result, value *fn_def) {
-	int result_reg = which_register(result, 0);
+void cg_fn_call(value *result, value *fn_def, int current_depth, int frame_size) {
+	int result_reg = which_register(result, 0, current_depth, frame_size);
 	regs[result_reg]->contents = result;	
 	append_mips(mips("jal", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("_%s", correct_string_rep(fn_def)), NULL, NULL, "", 1));
 	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(result_reg), make_register_operand($v0), NULL, "", 1));
+}
+
+/* Generate code to traverse a static link */
+void cg_load_static_link(int depth, int frame_size) {
+	int i = 0;
+	/*
+	* If depth_difference:
+	*	is 0 - pass in the same static link that we have in our current activation record (look up -8($s0))
+	*	is 1 - pass in the current $fp
+	*	otherwise - traverse this number of stack frames (lw $temp, -8($s0) depth difference amount of times, then move to $v0)
+	*/
+	switch(depth) {
+		case 0:
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, frame_size - 8), NULL, "Point callee to same static link as mine (caller)", 1));
+			break;
+		case 1:
+			append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($fp), NULL, "Set this current activation record as the static link", 1));			
+			break;
+		default:
+			for (i = 0; i < depth; i++) {
+				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s3), make_offset_operand($s0, frame_size - 8), NULL, "Move up static link", 1));
+			}
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, frame_size - 8), NULL, "Final static link found", 1));
+			break;
+	}
 }
 
 /* Write out code */
@@ -351,33 +404,27 @@ void write_code(tac_quad *quad) {
 			append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand(correct_string_rep(quad->operand1)), NULL, NULL, "", 0));
 			break;
 		case TT_ASSIGN:
-			cg_assign(quad->result, quad->operand1);
+			cg_assign(quad->result, quad->operand1, current_fn->stored_in_env->nested_level, frame_size);
 			break;
 		case TT_PUSH_PARAM:
-			cg_push_param(quad->operand1, ++param_number);
+			cg_push_param(quad->operand1, ++param_number, current_fn->stored_in_env->nested_level, frame_size);
 			break;
 		case TT_PREPARE:
 			param_number = -1;
 			break;
 		case TT_IF:
-			cg_if(quad->operand1, quad->result);
+			cg_if(quad->operand1, quad->result, current_fn->stored_in_env->nested_level, frame_size);
 			break;
 		case TT_OP:
-			cg_operation(quad->subtype, quad->operand1, quad->operand2, quad->result);
+			cg_operation(quad->subtype, quad->operand1, quad->operand2, quad->result, current_fn->stored_in_env->nested_level, frame_size);
 			break;
 		case TT_FN_CALL:
 			/* Reset param count */
 			param_number = -1;
 			/* Work out what static link to pass */
 			depth_difference = current_fn->stored_in_env->nested_level - quad->operand1->stored_in_env->nested_level;
-			/*
-			* If depth_difference:
-			*	is 0 - pass in the same static link that we have in our current activation record (look up -8($s0))
-			*	is 1 - pass in the current $fp
-			*	otherwise - traverse this number of stack frames (lw $temp, -8($s0) depth difference amount of times, then move to $v0)
-			*/ 
-			fatal("");
-			cg_fn_call(quad->result, quad->operand1);			
+			cg_load_static_link(depth_difference, frame_size);
+			cg_fn_call(quad->result, quad->operand1, current_fn->stored_in_env->nested_level, frame_size);			
 			break;
 		case TT_END_FN:
 			nesting_level--;		
@@ -393,7 +440,7 @@ void write_code(tac_quad *quad) {
 			/* Save the return value */
 			/* Restore the activation record */
 			if (quad->operand1) {
-				cg_assign_to_reg($v0, quad->operand1);
+				cg_assign_to_reg($v0, quad->operand1, current_fn->stored_in_env->nested_level, frame_size);
 			}
 			/* Load return address from stack */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Get return address", 1));
