@@ -424,7 +424,9 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			val1 = make_simple(env, node->left, flag, return_type);
 			val2 = make_simple(env, node->right, flag, return_type);
 			if (val1->value_type==VT_STRING) val1 = get(env, correct_string_rep(val1));
-			if (val2->value_type==VT_STRING) val2 = get(env, correct_string_rep(val2));			
+			if (val2->value_type==VT_STRING) val2 = get(env, correct_string_rep(val2));
+			assert(val1 != NULL, "Operand value 1 must not be null");	
+			assert(val2 != NULL, "Operand value 2 must not be null");				
 			if (flag != INTERPRET_FN_SCAN) append_code(make_quad_value(type_to_string(type_of(node)), val1, val2, temporary, TT_OP, type_of(node)));
 			return temporary;
 		case '~':

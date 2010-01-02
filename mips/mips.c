@@ -18,8 +18,8 @@ void append_mips(struct mips_instruction *ins) {
 
 /* Valid register - can the USER utilise the given register? */
 int register_use_allowed(int reg_id) {
-	/* can use all the $t* registers */
-	return (reg_id >= 8 && reg_id <= 15) || (reg_id >= 24 && reg_id <= 25);
+	/* can use all $t0-$t7 registers */
+	return (reg_id >= $t0 && reg_id <= $t7);
 }
 
 int is_argument_register(int reg_id) {
@@ -155,80 +155,41 @@ int activation_record_size(int local_size) {
 	return allocation_size;
 }
 
-/* Make the activation record structure, store the address of the created structure into the destination_reg */
-int generate_activation_record(int local_size) {
-	int allocation_size = activation_record_size(local_size);
-	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($s1), make_register_operand($a0), NULL, "Backup $a0", 1));
-	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($s2), make_register_operand($v0), NULL, "Backup $v0", 1));
-	append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($a0), make_constant_operand(allocation_size), NULL, "Allocation size for activation record", 1));
+/* Outputs fn that is used to build a new activation record, local_size passed in $a0 */
+void write_activation_record_fn() {
+	/* Make label */
+	operand *comment;
+	comment = make_label_operand("# Make a new activation record\n# Precondition: $a0 contains total required heap size, $v0 contains static link\n# Returns: start of heap address in $v0, heap contains reference to static link and old $fp value");
+	append_mips(mips_comment(comment, 0));
+	append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("mk_ar"), NULL, NULL, "", 0));
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($t8), make_constant_operand($v0), NULL, "Backup static link in $t8", 1));
 	append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($v0), make_constant_operand(9), NULL, "Allocate space systemcode", 1));
 	append_mips(syscall("Allocate space on heap"));
-	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($s0), make_register_operand($v0), NULL, "Save address of newly allocated AR", 1));
-	/* TO DO: Restore whatever was in $a0, $v0 */
-	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($a0), make_register_operand($s1), NULL, "Restore $a0", 1));
-	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($s2), NULL, "Restore $v0", 1));	
-	return allocation_size;
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($t9), make_constant_operand($fp), NULL, "Backup old $fp in $t9", 1));
+	/* Point $fp to the correct place */
+	append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand($fp), make_register_operand($v0), make_register_operand($a0), "$fp = heap start address + heap size", 1));
+	/* Save static link */
+	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($t8), make_offset_operand($fp, -4), NULL, "Save static link", 1));
+	/* Save old $fp */
+	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($t9), make_offset_operand($fp, -8), NULL, "Save old $fp", 1));	
+	/* Jump back */
+	append_mips(mips("jr", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "", 1));	
 }
 
-/* Load variable into a temporary register */
-int load_var(value *var, int current_depth, int frame_size) {
-	if (!var || is_constant(var)) return -1;
-	int var_depth = var->stored_in_env->nested_level;
-	int depth = var_depth - current_depth;
-	int reg_id = first_free_reg();
-	if (reg_id == REG_NONE_FREE) {
-		reg_id = choose_best_reg();
-		assert(reg_id!=-1, "Could not free up a register");
-	}	
-	switch(depth) {
-		case 1:
-			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s3), make_offset_operand($s0, frame_size - 8), NULL, "Load up static link", 1));
-			/* LOAD VARIABLE AS OFFSET FROM $s3 */
-			break;
-		default:
-			fatal("Do not understand how to load variables of nesting depth %d from an environment that is nested %d levels deep", var_depth, current_depth);
-			break;
-	}
-	
-	print_mips(instructions);
-	fatal("");
-	
-}
-
-/* All encompassing register assignment fn */
-int which_register(value *var, int must_already_exist, int current_depth, int frame_size) {
-	int reg_id = already_in_reg(var);
-	if (reg_id == REG_VALUE_NOT_AVAILABLE) {
-		reg_id = load_var(var, current_depth, frame_size);
-		if (reg_id == -1) {
-			if (!is_constant(var) && must_already_exist) {
-				fatal("Could not find value %s", correct_string_rep(var));
-			}
-			reg_id = first_free_reg();
-			if (reg_id == REG_NONE_FREE) {
-				reg_id = choose_best_reg();
-				assert(reg_id!=-1, "Could not free up a register");
-			}
-		}
-	}
-	/* Load constants into the freed register, if applicable */
-	if (is_constant(var)) {
-		/* Special zero register */
-		if (to_int(NULL, var)==0) return 0;
-		append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand(reg_id), make_constant_operand(to_int(NULL, var)), NULL, "Load constant into freed register", 1));
-		regs[reg_id]->contents = var;	
-	}
-	return reg_id;
+/* Load a variable in local scope */
+void cg_load_local_var(value *var, int destination_register) {
+	int num = var->variable_number;
+	append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(destination_register), make_offset_operand($fp, -4 * (num + 1)), NULL, "Load local variable", 1));
 }
 
 /* Generate code for an operation */
 void cg_operation(int operation, value *op1, value *op2, value *result, int current_depth, int frame_size) {
-	int result_reg = which_register(result, 0, current_depth, frame_size);
+	/*int result_reg = which_register(result, 0, current_depth, frame_size);
 	regs[result_reg]->contents = result;	
 	int op1_reg = which_register(op1, 1, current_depth, frame_size);
 	regs[op1_reg]->contents = op1;	
 	int op2_reg = which_register(op2, 1, current_depth, frame_size);	
-	regs[op2_reg]->contents = op2;		
+	regs[op2_reg]->contents = op2;
 	switch(operation) {
 		case '+':
 			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "", 1));
@@ -248,69 +209,44 @@ void cg_operation(int operation, value *op1, value *op2, value *result, int curr
 			append_mips(mips("div", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(op1_reg), make_register_operand(op2_reg), NULL, "", 1));
 			append_mips(mips("mfhi", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand(result_reg), NULL, NULL, "", 1));
 			break;
-	}
+	}*/
 }
 
 /* Code generate PUSHING a parameter */
 void cg_push_param(value *operand, int param_number, int current_depth, int frame_size) {
-	if (param_number > 4) {
-		/* TO DO: Store at end of heap */
+	/*if (param_number > 4) {
+		// TO DO: Store at end of heap
 	}
 	else {
-		/* TO DO: If value is not empty, save it in current frame */
+		// TO DO: If value is not empty, save it in current frame
 		int operand_reg = which_register(operand, 1, current_depth, frame_size);
 		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($a0 + param_number), make_register_operand(operand_reg), NULL, "Push operand", 1));
-	}
+	}*/
 }
 
 /* Code generate POPPING a parameter */
 void cg_pop_param(value *operand, int param_number) {
-	if (param_number > 4) {
-		/* TO DO: Load from end of heap */
-	}
-	else {
-		int index = $a0 + param_number;
-		if (regs[index]->contents) {
-			/* TO DO: Backup existing value */
-		}
-		regs[index]->contents = operand;
-		regs[index]->assignment_id = ++regs_assignments;
-		regs[index]->accesses = 1;
-	}
-}
-
-/* Code generate an assignment to a specific register */
-void cg_assign_to_reg(int reg, value *operand1, int current_depth, int frame_size) {
-	if (operand1->value_type == VT_FUNCTN) {
-		/* Functions require addresses to be loaded */
-		append_mips(mips("la", OT_REGISTER, OT_LABEL, OT_UNSET, make_register_operand(reg), make_label_operand("_%s", correct_string_rep(operand1)), NULL, "", 1));
-	}
-	else {
-		int op1_reg = which_register(operand1, 1, current_depth, frame_size);
-		regs[op1_reg]->contents = operand1;
-		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(reg), make_register_operand(op1_reg), NULL, "", 1));
-	}
+	
 }
 
 /* Code generate an assignment */
 void cg_assign(value *result, value *operand1, int current_depth, int frame_size) {
-	int result_reg = which_register(result, 0, current_depth, frame_size);
-	regs[result_reg]->contents = result;
-	cg_assign_to_reg(result_reg, operand1, current_depth, frame_size);
+	/*int result_reg = which_register(result, 0, current_depth, frame_size);
+	regs[result_reg]->contents = result;*/
 }
 
 /* Code generate an IF statement */
 void cg_if(value *condition, value *true_label, int current_depth, int frame_size) {
-	int condition_register = which_register(condition, 1, current_depth, frame_size);
-	append_mips(mips("bne", OT_REGISTER, OT_REGISTER, OT_LABEL, make_register_operand(condition_register), make_register_operand($zero), make_label_operand(correct_string_rep(true_label)), "", 1));
+	/*int condition_register = which_register(condition, 1, current_depth, frame_size);
+	append_mips(mips("bne", OT_REGISTER, OT_REGISTER, OT_LABEL, make_register_operand(condition_register), make_register_operand($zero), make_label_operand(correct_string_rep(true_label)), "", 1));*/
 }
 
 /* Code generate a fn call */
 void cg_fn_call(value *result, value *fn_def, int current_depth, int frame_size) {
-	int result_reg = which_register(result, 0, current_depth, frame_size);
+	/*int result_reg = which_register(result, 0, current_depth, frame_size);
 	regs[result_reg]->contents = result;	
 	append_mips(mips("jal", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("_%s", correct_string_rep(fn_def)), NULL, NULL, "", 1));
-	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(result_reg), make_register_operand($v0), NULL, "", 1));
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(result_reg), make_register_operand($v0), NULL, "", 1));*/
 }
 
 /* Generate code to traverse a static link */
@@ -375,23 +311,24 @@ void write_code(tac_quad *quad) {
 			nesting_level++;
 			break;
 		case TT_INIT_FRAME:
+			/* Verified: HT */
 			size = to_int(NULL, quad->operand1);
-			size = generate_activation_record(size);
+			size = activation_record_size(size);
 			frame_size = size;
-			/* Store old frame pointer */
-			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($fp), make_offset_operand($s0, size-4), NULL, "Save previous frame ptr", 1));
-			/* Store static link AFTER frame pointer */
-			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, size-8), NULL, "Save static link passed in $v0", 1));
-			/* Move the $fp to point to the start of the record */
-			append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($fp), make_register_operand($s0), NULL, "Set the $fp to point at the end of the record", 1));
-			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($fp), make_register_operand($fp), make_constant_operand(frame_size), "Set the $fp to point at the START of the record", 1));
+			/* Make activation record of required size */
+			append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($a0), make_constant_operand(frame_size), NULL, "Store the frame size required for this AR", 1));
+			append_mips(mips("jal", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("mk_ar"), NULL, NULL, "", 1));
+			/* Store a reference to activation record address in $s0 */
+			append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($s0), make_register_operand($v0), NULL, "Store heap end address in $s0", 1));
 			break;
 		case TT_BEGIN_FN:
+			/* Verified: HT */
 			if (strcmp(correct_string_rep(quad->operand1), "main")==0) entry_point = quad;
 			current_fn = quad->operand1;
+			/* Save return address in stack */
 			append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("_%s", correct_string_rep(quad->operand1)), NULL, NULL, "", 0));
 			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "", 1));
-			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "", 1));
+			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Save return address in stack", 1));
 			param_number = -1;
 			break;
 		case TT_GOTO:
@@ -440,7 +377,7 @@ void write_code(tac_quad *quad) {
 			/* Save the return value */
 			/* Restore the activation record */
 			if (quad->operand1) {
-				cg_assign_to_reg($v0, quad->operand1, current_fn->stored_in_env->nested_level, frame_size);
+				//cg_assign_to_reg($v0, quad->operand1, current_fn->stored_in_env->nested_level, frame_size);
 			}
 			/* Load return address from stack */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Get return address", 1));
@@ -468,6 +405,7 @@ void code_gen(NODE *tree) {
 	write_code(quad);
 	/* Write out inner fns separately */
 	write_code(pending_code);
+	write_activation_record_fn();
 	write_epilogue();	
 	print_mips(instructions);
 }

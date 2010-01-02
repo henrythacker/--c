@@ -57,7 +57,7 @@ void print_mips_operand(mips_instruction *instruction, int operand) {
 			}
 			break;
 		case OT_COMMENT:
-			printf("%s%s", operand_value->label, more_operands ? ", " : "");				
+			if (DEBUG_ON) printf("%s%s", operand_value->label, more_operands ? ", " : "");				
 			break;
 		case OT_CONSTANT:
 			printf("%d%s", operand_value->constant, more_operands ? ", " : "");				
