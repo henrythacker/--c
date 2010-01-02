@@ -219,12 +219,23 @@ void cg_operation(int operation, value *op1, value *op2, value *result, int curr
 */
 
 int cg_find_variable(value *variable, int current_depth, int frame_size) {
+	if (!variable || !variable->stored_in_env) {
+		fatal("Could not find variable %s!", correct_string_rep(variable));
+	}
 	int reg_id = already_in_reg(variable);
-	if (!variable->stored_in_env) fatal("Could not find variable %s", correct_string_rep(variable));
 	if (reg_id == REG_VALUE_NOT_AVAILABLE) {
 		/* Have to try and load this variable from the activation records */
-		fatal("%s\n", correct_string_rep(variable));
-		//fatal("Looking to try and locate variable: %s, depth: %d, current depth: %d", correct_string_rep(variable), variable->stored_in_env->nested_level, current_depth);
+		int level_difference = (current_depth + 1) - variable->stored_in_env->nested_level;
+		reg_id = choose_best_reg();
+		switch(level_difference) {
+			case 0:
+				/* Available in local scope */
+				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($fp, -4 * (variable->variable_number + 1)), NULL, "Load variable from local scope", 1));
+				break;
+			default:
+				fatal("Difference: %d", level_difference);
+				break;
+		}
 	}
 	return reg_id;
 }
@@ -239,6 +250,20 @@ void cg_store_in_reg(int reg, value *operand, int current_depth, int frame_size)
 		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(reg), make_register_operand(value_reg), NULL, "Assign values", 1));	
 	}
 }
+
+/* Either return the existing register that has been used to store a variable in, or insert into new register */
+int get_register(value *variable, int current_depth, int frame_size, int must_already_exist) {
+	int reg_id = cg_find_variable(variable, current_depth, frame_size);
+	if (reg_id == REG_VALUE_NOT_AVAILABLE) {
+		if (must_already_exist) {
+			fatal("Could not find variable %s", correct_string_rep(variable));
+		}
+		reg_id = choose_best_reg();
+		regs[reg_id]->contents = variable;
+	}
+	return reg_id;
+}
+
 
 /*
 * END VARIABLE STORE FNS
@@ -262,8 +287,8 @@ void cg_pop_param(value *operand) {
 
 /* Code generate an assignment */
 void cg_assign(value *result, value *operand1, int current_depth, int frame_size) {
-	/*int result_reg = which_register(result, 0, current_depth, frame_size);
-	regs[result_reg]->contents = result;*/
+	int result_reg = get_register(result, current_depth, frame_size, 1);
+	
 }
 
 /* Code generate an IF statement */

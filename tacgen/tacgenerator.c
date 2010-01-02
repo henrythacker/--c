@@ -24,7 +24,7 @@ void print_tac(tac_quad *quad) {
 			printf("_%s:\n", to_string(quad->operand1));
 			break;	
 		case TT_FN_CALL:
-			printf("%s = CallFn _%s\n", correct_string_rep(quad->result), to_string(quad->operand1));
+			printf("%s = CallFn _%s\n", correct_string_rep(quad->result), correct_string_rep(quad->operand1));
 			break;			
 		case TT_INIT_FRAME:
 			printf("InitFrame %s\n", correct_string_rep(quad->operand1));
@@ -294,10 +294,14 @@ void register_params(environment *env, value *param_list) {
 }
 
 /* Push params on param stack in reverse order (recursively) */
-tac_quad *push_params(value *params_head) {
+tac_quad *push_params(environment *env, value *params_head) {
 	if (!params_head) return NULL;
 	if (params_head->next) {
-		append_code(push_params(params_head->next));
+		append_code(push_params(env, params_head->next));
+	}
+	if (params_head->value_type == VT_STRING) {
+		value *tmp = get(env, correct_string_rep(params_head));
+		return make_quad_value("", tmp, NULL, NULL, TT_PUSH_PARAM, 0);		
 	}
 	return make_quad_value("", params_head, NULL, NULL, TT_PUSH_PARAM, 0);		
 }
@@ -524,7 +528,7 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			temp = search(env, to_string(val1), VT_FUNCTN, VT_ANY, 1);
 			if (temp) {
 				append_code(prepare_fn(val2));
-				append_code(push_params(val2));
+				append_code(push_params(env, val2));
 				/* If we can't typecheck, set a special UNDEFINED flag to say we can't */
 				/* typecheck. This can happen with function variables, we do not EASILY know the */
 				/* return type of the functions they are bound to until runtime. */
