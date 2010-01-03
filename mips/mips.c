@@ -275,6 +275,9 @@ void cg_operation(int operation, value *op1, value *op2, value *result, int curr
 			append_mips(mips("div", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(op1_reg), make_register_operand(op2_reg), NULL, "", 1));
 			append_mips(mips("mfhi", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand(result_reg), NULL, NULL, "", 1));
 			break;
+		default:
+			fatal("Unrecognised operator ");
+			break;
 	}
 }
 
