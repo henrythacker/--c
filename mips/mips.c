@@ -570,6 +570,9 @@ void write_code(tac_quad *quad) {
 
 /* Generate MIPS code for given tree */
 void code_gen(NODE *tree) {
+	if (!tree) {
+		fatal("Invalid input");
+	}
 	regs = (register_contents **) malloc(sizeof(register_contents *) * REG_COUNT);
 	init_register_view();
 	print_register_view();
