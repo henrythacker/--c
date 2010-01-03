@@ -190,7 +190,7 @@ void cg_load_local_var(value *var, int destination_register) {
 }
 
 /*
-* VARIABLE STORE FNS
+* VARIABLE FNS
 */
 
 /* Find a variable, load it into a register if not already in one, return the register ID */
@@ -246,9 +246,8 @@ int get_register(value *variable, int current_depth, int frame_size, int must_al
 	return reg_id;
 }
 
-
 /*
-* END VARIABLE STORE FNS
+* END VARIABLE FNS
 */
 
 /* Generate code for an operation */
