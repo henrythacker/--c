@@ -297,8 +297,13 @@ void cg_operation(int operation, value *op1, value *op2, value *result, int curr
 			break;
 		case '<':
 			op1_reg = get_register(op1, current_depth, frame_size, 1);
-			op2_reg = get_register(op2, current_depth, frame_size, 1);
-			append_mips(mips("slt", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a < $b", 1));
+			if (is_constant(op2)) {
+				append_mips(mips("slti", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(result_reg), make_register_operand(op1_reg), make_constant_operand(to_int(NULL, op2)), "$c = $a < b", 1));				
+			}
+			else {
+				op2_reg = get_register(op2, current_depth, frame_size, 1);
+				append_mips(mips("slti", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a < $b", 1));											
+			}
 			break;
 		case '>':
 			op1_reg = get_register(op1, current_depth, frame_size, 1);
