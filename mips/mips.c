@@ -222,9 +222,15 @@ int cg_find_variable(value *variable, environment *current_env, int frame_size, 
 			append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand(reg_id), make_constant_operand(to_int(NULL, variable)), NULL, "", 1));
 			return reg_id;
 		}
-		
-		/* Have to try and load this variable from the information stored within activation records */
-		
+		/* Support loading local variables */
+		if (variable->stored_in_env->static_link == current_env) {
+			cg_load_local_var(variable, reg_id);
+		}
+		else {
+			/* TO DO NEXT - for cplusa */
+			/* Have to try and load this variable from the information stored within activation records */	
+			fatal("test");
+		}
 	}
 	return reg_id;
 }
