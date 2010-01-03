@@ -434,15 +434,12 @@ void clear_regs() {
 }
 
 /* Save pertinent $t regs before a fn call in case they get overwritten */
-void save_t_regs(environment *env) {
+void save_t_regs(environment *env, int nesting_level) {
 	int i = 0;
-	static int f = 0;
-	if (!env || ++f > 2) return;
-	printf("T REG START\n");
 	print_register_view();
 	for (i = 0; i < REG_COUNT; i++) {
 		if (regs[i]->contents) {
-			printf("regs[%d]->contents->environment = %p, Local_env = %p, %d\n", i, regs[i]->contents->stored_in_env, env, regs[i]->contents->variable_number);
+			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand($fp, -4 * (regs[i]->contents->variable_number + 1)), NULL, "Write out used local variable", 1));
 		}
 	}
 }
@@ -542,7 +539,7 @@ void write_code(tac_quad *quad) {
 			/* Reset param count */
 			param_number = -1;
 			/* Wire out live registers into memory, in-case they're overwritten */
-			save_t_regs(current_fn->data.func->local_env);
+			save_t_regs(current_fn->data.func->local_env, nesting_level);
 			clear_regs();
 			/* Work out what static link to pass */
 			depth_difference = current_fn->stored_in_env->nested_level - quad->operand1->stored_in_env->nested_level;
@@ -560,6 +557,7 @@ void write_code(tac_quad *quad) {
 			/* Load previous static link */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s0), make_offset_operand($s0, 8), NULL, "Load dynamic link", 1));
 			append_mips(mips("jr", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "Jump to $ra", 1));
+			clear_regs();
 			break;
 		case TT_RETURN:
 			/* Save the return value */
