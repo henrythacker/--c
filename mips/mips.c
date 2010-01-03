@@ -280,7 +280,7 @@ void cg_operation(int operation, value *op1, value *op2, value *result, int curr
 		case '*':
 			op1_reg = get_register(op1, current_depth, frame_size, 1);
 			op2_reg = get_register(op2, current_depth, frame_size, 1);
-			append_mips(mips("mul", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(op1_reg), make_register_operand(op2_reg), NULL, "", 1));
+			append_mips(mips("mult", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(op1_reg), make_register_operand(op2_reg), NULL, "", 1));
 			append_mips(mips("mflo", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand(result_reg), NULL, NULL, "", 1));			
 			break;	
 		case '/':
