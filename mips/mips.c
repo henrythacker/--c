@@ -297,49 +297,23 @@ void cg_operation(int operation, value *op1, value *op2, value *result, int curr
 			break;
 		case '<':
 			op1_reg = get_register(op1, current_depth, frame_size, 1);
-			if (is_constant(op2)) {
-				append_mips(mips("slti", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(result_reg), make_register_operand(op1_reg), make_constant_operand(to_int(NULL, op2)), "$c = $a < b", 1));
-			}
-			else {
-				op2_reg = get_register(op2, current_depth, frame_size, 1);
-				append_mips(mips("slt", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a < $b", 1));
-			}
+			op2_reg = get_register(op2, current_depth, frame_size, 1);
+			append_mips(mips("slt", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a < $b", 1));
 			break;
 		case '>':
-			/* Invert operands to perform > as < */
+			op1_reg = get_register(op1, current_depth, frame_size, 1);
 			op2_reg = get_register(op2, current_depth, frame_size, 1);
-			if (is_constant(op1)) {
-				append_mips(mips("slti", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(result_reg), make_register_operand(op2_reg), make_constant_operand(to_int(NULL, op1)), "$c = $b < a", 1));
-			}
-			else {
-				op1_reg = get_register(op1, current_depth, frame_size, 1);
-				append_mips(mips("slt", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op2_reg), make_register_operand(op1_reg), "$c = $b < $a", 1));
-			}
+			append_mips(mips("sgt", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a > $b", 1));
 			break;
 		case LE_OP:
 			op1_reg = get_register(op1, current_depth, frame_size, 1);
-			/* Add one to op1_reg */
-			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(op1_reg), make_register_operand(op1_reg), make_constant_operand(1), "Convert <= to <", 1));
-			if (is_constant(op2)) {
-				append_mips(mips("slti", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(result_reg), make_register_operand(op1_reg), make_constant_operand(to_int(NULL, op2)), "$c = $a < b", 1));
-			}
-			else {
-				op2_reg = get_register(op2, current_depth, frame_size, 1);
-				append_mips(mips("slt", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a < $b", 1));
-			}
+			op2_reg = get_register(op2, current_depth, frame_size, 1);
+			append_mips(mips("sle", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a <= $b", 1));
 			break;
 		case GE_OP:
-			/* Invert operands to perform >= as <= */
+			op1_reg = get_register(op1, current_depth, frame_size, 1);
 			op2_reg = get_register(op2, current_depth, frame_size, 1);
-			/* Sub one from op2_reg */
-			append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(op2_reg), make_register_operand(op2_reg), make_constant_operand(1), "Convert >= to >", 1));
-			if (is_constant(op1)) {
-				append_mips(mips("slti", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(result_reg), make_register_operand(op2_reg), make_constant_operand(to_int(NULL, op1)), "$c = $b < a", 1));
-			}
-			else {
-				op1_reg = get_register(op1, current_depth, frame_size, 1);
-				append_mips(mips("slt", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op2_reg), make_register_operand(op1_reg), "$c = $b < $a", 1));
-			}
+			append_mips(mips("sge", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a >= $b", 1));
 			break;	
 		case EQ_OP:
 			op1_reg = get_register(op1, current_depth, frame_size, 1);
