@@ -434,9 +434,8 @@ void clear_regs() {
 }
 
 /* Save pertinent $t regs before a fn call in case they get overwritten */
-void save_t_regs(environment *env, int nesting_level) {
+void save_t_regs() {
 	int i = 0;
-	print_register_view();
 	for (i = 0; i < REG_COUNT; i++) {
 		if (regs[i]->contents) {
 			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand($fp, -4 * (regs[i]->contents->variable_number + 1)), NULL, "Write out used local variable", 1));
@@ -544,7 +543,7 @@ void write_code(tac_quad *quad) {
 			/* Reset param count */
 			param_number = -1;
 			/* Wire out live registers into memory, in-case they're overwritten */
-			save_t_regs(current_fn->data.func->local_env, nesting_level);
+			save_t_regs();
 			clear_regs();
 			/* Work out what static link to pass */
 			depth_difference = current_fn->stored_in_env->nested_level - quad->operand1->stored_in_env->nested_level;
@@ -553,6 +552,8 @@ void write_code(tac_quad *quad) {
 			break;
 		case TT_END_FN:
 			nesting_level--;		
+			/* Save regs */
+			save_t_regs();
 			/* Load return address from stack */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Get return address", 1));
 			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "Pop return address from stack", 1));
@@ -570,6 +571,8 @@ void write_code(tac_quad *quad) {
 			if (quad->operand1) {
 				cg_store_in_reg($v0, quad->operand1, current_fn->stored_in_env->nested_level, frame_size);
 			}
+			/* Save regs */
+			save_t_regs();
 			/* Load return address from stack */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Get return address", 1));
 			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "Pop return address from stack", 1));
