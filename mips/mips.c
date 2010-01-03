@@ -207,7 +207,7 @@ int cg_find_variable(value *variable, int current_depth, int frame_size, int sho
 			append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand(reg_id), make_constant_operand(to_int(NULL, variable)), NULL, "", 1));
 			return reg_id;
 		}
-		/* Have to try and load this variable from the activation records */
+		/* Have to try and load this variable from the information stored within activation records */
 		int level_difference = (current_depth + 1) - variable->stored_in_env->nested_level;
 		switch(level_difference) {
 			case 0:
@@ -215,7 +215,7 @@ int cg_find_variable(value *variable, int current_depth, int frame_size, int sho
 				cg_load_local_var(variable, reg_id);
 				break;
 			default:
-				fatal("Difference: %d", level_difference);
+				//fatal("Difference: %d", level_difference);
 				break;
 		}
 	}
@@ -377,15 +377,41 @@ void cg_fn_call(value *result, value *fn_def, int current_depth, int frame_size)
 	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(result_reg), make_register_operand($v0), NULL, "", 1));
 }
 
+/* Find the depth difference between two different environments */
+int depth_difference(environment *caller_env, environment *callee_env) {
+	int depth = 0;
+	environment *env = caller_env;		
+	if (callee_env == caller_env) return 0;
+	while(env) {
+		env = env->static_link;
+		depth++;
+		printf("Comparing current traversal %p to callee_env of %p\n", env, callee_env);
+		if (env == callee_env) {
+			return depth;
+		}
+	}
+	return -1;
+}
+
 /* Generate code to traverse a static link */
-void cg_load_static_link(int depth, int frame_size) {
+void cg_load_static_link(value *caller, value *callee, int frame_size) {
 	int i = 0;
-	/*
-	* If depth_difference:
-	*	is 0 - pass in the same static link that we have in our current activation record (look up -8($s0))
-	*	is 1 - pass in the current $fp
-	*	otherwise - traverse this number of stack frames (lw $temp, -8($s0) depth difference amount of times, then move to $v0)
-	*/
+	if (!caller || !callee) return;
+	
+	if (caller->stored_in_env == callee->stored_in_env) {
+		/* Same level */
+		append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, 0), NULL, "Point callee to same static link as mine (caller)", 1));
+	}
+	else if (caller->stored_in_env == callee->stored_in_env->static_link) {
+		/* Directly nested */
+		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($fp), NULL, "Set this current activation record (via $fp) as the static link", 1));			
+	}
+	else {
+		/* TO DO: Not yet implemented */
+		fatal("Caller: %s - Callee: %s are of different levels - Difference = %d", correct_string_rep(caller), correct_string_rep(callee), depth_difference(caller->stored_in_env, callee->stored_in_env));
+	}
+
+/*
 	switch(depth) {
 		case 0:
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, 0), NULL, "Point callee to same static link as mine (caller)", 1));
@@ -399,7 +425,7 @@ void cg_load_static_link(int depth, int frame_size) {
 			}
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, 0), NULL, "Final static link found", 1));
 			break;
-	}
+	}*/
 }
 
 /* Clear our view of the registers */
@@ -425,10 +451,6 @@ void save_t_regs() {
 /* Write out code */
 void write_code(tac_quad *quad) {
 	/* No parameters, 0 = 1 parameter (0 because $a0 is first arg register), so -1 is no args */
-	static int param_number = -1;
-	static int frame_size = 0;
-	static int nesting_level = -1;
-	static value *current_fn = NULL;
 	int depth_difference = 0;
 	int size = 0;
 	int temporary;
@@ -448,9 +470,8 @@ void write_code(tac_quad *quad) {
 			}
 			tmp_quad->next = new_quad;
 		}
-		if (quad->type == TT_END_FN) {
-			nesting_level--;		
-		}
+		if (quad->type == TT_BEGIN_FN) nesting_level++;
+		if (quad->type == TT_END_FN) nesting_level--;		
 		write_code(quad->next);
 		return;
 	}
@@ -485,7 +506,7 @@ void write_code(tac_quad *quad) {
 				write_code(quad);
 				return;
 			}
-			if (strcmp(correct_string_rep(quad->operand1), "main")==0) entry_point = quad;
+			if (strcmp(correct_string_rep(quad->operand1), "main")==0) entry_point = quad; 
 			current_fn = quad->operand1;
 			append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("_%s", correct_string_rep(quad->operand1)), NULL, NULL, "", 0));
 			param_number = -1;
@@ -521,12 +542,15 @@ void write_code(tac_quad *quad) {
 		case TT_FN_CALL:
 			/* Reset param count */
 			param_number = -1;
+			
+			fatal(correct_string_rep(quad->operand1));
+			
 			/* Wire out live registers into memory, in-case they're overwritten */
 			save_t_regs();
 			clear_regs();
 			/* Work out what static link to pass */
 			depth_difference = current_fn->stored_in_env->nested_level - quad->operand1->stored_in_env->nested_level;
-			cg_load_static_link(depth_difference, frame_size);
+			cg_load_static_link(current_fn, quad->operand1, frame_size);
 			cg_fn_call(quad->result, quad->operand1, current_fn->stored_in_env->nested_level, frame_size);			
 			break;
 		case TT_END_FN:
@@ -568,6 +592,14 @@ void write_code(tac_quad *quad) {
 	write_code(quad->next);
 }
 
+/* Reset global variables to their defaults before running write_code each time */
+void reset_globals() {
+	param_number = -1;
+	frame_size = 0;
+	nesting_level = -1;
+	current_fn = NULL;
+}
+
 /* Generate MIPS code for given tree */
 void code_gen(NODE *tree) {
 	if (!tree) {
@@ -578,7 +610,9 @@ void code_gen(NODE *tree) {
 	print_register_view();
 	tac_quad *quad = start_tac_gen(tree);
 	write_preamble();
+	reset_globals();
 	write_code(quad);
+	reset_globals();
 	/* Write out inner fns separately */
 	write_code(pending_code);
 	write_activation_record_fn();

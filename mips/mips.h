@@ -40,4 +40,9 @@ typedef struct register_contents {
 register_contents** regs;
 int regs_assignments;
 
+int param_number;
+int frame_size;
+int nesting_level;
+value *current_fn;
+
 #endif
