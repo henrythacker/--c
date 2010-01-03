@@ -479,7 +479,6 @@ void write_code(tac_quad *quad) {
 	switch(quad->type) {
 		case TT_FN_DEF:
 			/* Verified: HT */
-			nesting_level++;
 			break;
 		case TT_INIT_FRAME:
 			/* Verified: HT */
@@ -502,6 +501,12 @@ void write_code(tac_quad *quad) {
 			break;
 		case TT_BEGIN_FN:
 			/* Verified: HT */
+			nesting_level++;
+			if (nesting_level > 0) {
+				/* Store this node for later processing, if this is a nested fn */
+				write_code(quad);
+				return;
+			}
 			if (strcmp(correct_string_rep(quad->operand1), "main")==0) entry_point = quad;
 			current_fn = quad->operand1;
 			append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("_%s", correct_string_rep(quad->operand1)), NULL, NULL, "", 0));
