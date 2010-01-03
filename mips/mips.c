@@ -385,7 +385,6 @@ int depth_difference(environment *caller_env, environment *callee_env) {
 	while(env) {
 		env = env->static_link;
 		depth++;
-		printf("Comparing current traversal %p to callee_env of %p\n", env, callee_env);
 		if (env == callee_env) {
 			return depth;
 		}
@@ -397,7 +396,6 @@ int depth_difference(environment *caller_env, environment *callee_env) {
 void cg_load_static_link(value *caller, value *callee, int frame_size) {
 	int i = 0;
 	if (!caller || !callee) return;
-	
 	if (caller->stored_in_env == callee->stored_in_env) {
 		/* Same level */
 		append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, 0), NULL, "Point callee to same static link as mine (caller)", 1));
@@ -407,25 +405,12 @@ void cg_load_static_link(value *caller, value *callee, int frame_size) {
 		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($fp), NULL, "Set this current activation record (via $fp) as the static link", 1));			
 	}
 	else {
-		/* TO DO: Not yet implemented */
-		fatal("Caller: %s - Callee: %s are of different levels - Difference = %d", correct_string_rep(caller), correct_string_rep(callee), depth_difference(caller->stored_in_env, callee->stored_in_env));
+		int diff = depth_difference(caller->stored_in_env, callee->stored_in_env);
+		append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, 0), NULL, "Move up one static link", 1));
+		for (i=0; i < diff; i++) {
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($v0, 0), NULL, "Point callee to same static link as mine (caller)", 1));
+		}	
 	}
-
-/*
-	switch(depth) {
-		case 0:
-			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, 0), NULL, "Point callee to same static link as mine (caller)", 1));
-			break;
-		case 1:
-			append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($fp), NULL, "Set this current activation record as the static link", 1));			
-			break;
-		default:
-			for (i = 0; i < depth; i++) {
-				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s3), make_offset_operand($s0, 0), NULL, "Move up static link", 1));
-			}
-			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, 0), NULL, "Final static link found", 1));
-			break;
-	}*/
 }
 
 /* Clear our view of the registers */
@@ -442,7 +427,7 @@ void clear_regs() {
 void save_t_regs() {
 	int i = 0;
 	for (i = 0; i < REG_COUNT; i++) {
-		if (regs[i]->contents) {
+		if (regs[i]->contents && regs[i]->contents->stored_in_env) {
 			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand($fp, -4 * (regs[i]->contents->variable_number + 1)), NULL, "Write out used local variable", 1));
 		}
 	}
@@ -454,6 +439,8 @@ void write_code(tac_quad *quad) {
 	int depth_difference = 0;
 	int size = 0;
 	int temporary;
+	static int begins_seen = 0;
+	static int ends_seen = 0;	
 	if (!quad) return;
 	/* Reorder the TAC so that inner fns are moved out */
 	if (nesting_level > 0) {
@@ -470,11 +457,21 @@ void write_code(tac_quad *quad) {
 			}
 			tmp_quad->next = new_quad;
 		}
-		if (quad->type == TT_BEGIN_FN) nesting_level++;
-		if (quad->type == TT_END_FN) nesting_level--;		
+		if (quad->type == TT_BEGIN_FN) {;
+			begins_seen++;
+		}
+		if (quad->type == TT_END_FN) {
+			ends_seen++;			
+		}
+		if (begins_seen == ends_seen) {
+			/* Decrement nesting_level */
+			--nesting_level;
+		}
 		write_code(quad->next);
 		return;
 	}
+	begins_seen = 0;
+	ends_seen = 0;
 	switch(quad->type) {
 		case TT_FN_DEF:
 			/* Verified: HT */
@@ -541,15 +538,11 @@ void write_code(tac_quad *quad) {
 			break;
 		case TT_FN_CALL:
 			/* Reset param count */
-			param_number = -1;
-			
-			fatal(correct_string_rep(quad->operand1));
-			
+			param_number = -1;			
 			/* Wire out live registers into memory, in-case they're overwritten */
 			save_t_regs();
 			clear_regs();
 			/* Work out what static link to pass */
-			depth_difference = current_fn->stored_in_env->nested_level - quad->operand1->stored_in_env->nested_level;
 			cg_load_static_link(current_fn, quad->operand1, frame_size);
 			cg_fn_call(quad->result, quad->operand1, current_fn->stored_in_env->nested_level, frame_size);			
 			break;
