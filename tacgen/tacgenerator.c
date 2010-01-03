@@ -397,8 +397,7 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			append_code(make_goto(s_tmp));
 			return NULL;
 		case WHILE:
-			new_env = create_environment(env);
-			build_while_stmt(new_env, node, ++while_count, ++if_count, flag, return_type);
+			build_while_stmt(env, node, ++while_count, ++if_count, flag, return_type);
 			return NULL;	
 		case '=':
 			if (flag == INTERPRET_FN_SCAN) return NULL;

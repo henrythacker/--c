@@ -254,31 +254,107 @@ int get_register(value *variable, int current_depth, int frame_size, int must_al
 /* Generate code for an operation */
 void cg_operation(int operation, value *op1, value *op2, value *result, int current_depth, int frame_size) {
 	int result_reg = get_register(result, current_depth, frame_size, 0);
-	int op1_reg = get_register(op1, current_depth, frame_size, 1);
-	int op2_reg = get_register(op2, current_depth, frame_size, 1);
+	int op1_reg = -1;
+	int op2_reg = -1;
 	switch(operation) {
 		case '+':
-			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "", 1));
+			op1_reg = get_register(op1, current_depth, frame_size, 1);
+			if (is_constant(op2)) {
+				append_mips(mips("addi", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(result_reg), make_register_operand(op1_reg), make_constant_operand(to_int(NULL, op2)), "", 1));
+			}
+			else {
+				op2_reg = get_register(op2, current_depth, frame_size, 1);
+				append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "", 1));
+			}
 			break;
 		case '-':
-			append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "", 1));
+			op1_reg = get_register(op1, current_depth, frame_size, 1);
+			if (is_constant(op2)) {
+				append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(result_reg), make_register_operand(op1_reg), make_constant_operand(to_int(NULL, op2)), "", 1));
+			}
+			else {
+				op2_reg = get_register(op2, current_depth, frame_size, 1);
+				append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "", 1));
+			}
 			break;
 		case '*':
+			op1_reg = get_register(op1, current_depth, frame_size, 1);
+			op2_reg = get_register(op2, current_depth, frame_size, 1);
 			append_mips(mips("mul", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(op1_reg), make_register_operand(op2_reg), NULL, "", 1));
 			append_mips(mips("mflo", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand(result_reg), NULL, NULL, "", 1));			
 			break;	
 		case '/':
+			op1_reg = get_register(op1, current_depth, frame_size, 1);
+			op2_reg = get_register(op2, current_depth, frame_size, 1);
 			append_mips(mips("div", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(op1_reg), make_register_operand(op2_reg), NULL, "", 1));
 			append_mips(mips("mflo", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand(result_reg), NULL, NULL, "", 1));
 			break;
 		case '%':
+			op1_reg = get_register(op1, current_depth, frame_size, 1);
+			op2_reg = get_register(op2, current_depth, frame_size, 1);
 			append_mips(mips("div", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(op1_reg), make_register_operand(op2_reg), NULL, "", 1));
 			append_mips(mips("mfhi", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand(result_reg), NULL, NULL, "", 1));
 			break;
-		default:
-			fatal("Unrecognised operator ");
+		case '<':
+			op1_reg = get_register(op1, current_depth, frame_size, 1);
+			if (is_constant(op2)) {
+				append_mips(mips("slti", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(result_reg), make_register_operand(op1_reg), make_constant_operand(to_int(NULL, op2)), "$c = $a < b", 1));
+			}
+			else {
+				op2_reg = get_register(op2, current_depth, frame_size, 1);
+				append_mips(mips("slt", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a < $b", 1));
+			}
 			break;
-	}
+		case '>':
+			/* Invert operands to perform > as < */
+			op2_reg = get_register(op2, current_depth, frame_size, 1);
+			if (is_constant(op1)) {
+				append_mips(mips("slti", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(result_reg), make_register_operand(op2_reg), make_constant_operand(to_int(NULL, op1)), "$c = $b < a", 1));
+			}
+			else {
+				op1_reg = get_register(op1, current_depth, frame_size, 1);
+				append_mips(mips("slt", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op2_reg), make_register_operand(op1_reg), "$c = $b < $a", 1));
+			}
+			break;
+		case LE_OP:
+			op1_reg = get_register(op1, current_depth, frame_size, 1);
+			/* Add one to op1_reg */
+			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(op1_reg), make_register_operand(op1_reg), make_constant_operand(1), "Convert <= to <", 1));
+			if (is_constant(op2)) {
+				append_mips(mips("slti", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(result_reg), make_register_operand(op1_reg), make_constant_operand(to_int(NULL, op2)), "$c = $a < b", 1));
+			}
+			else {
+				op2_reg = get_register(op2, current_depth, frame_size, 1);
+				append_mips(mips("slt", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a < $b", 1));
+			}
+			break;
+		case GE_OP:
+			/* Invert operands to perform >= as <= */
+			op2_reg = get_register(op2, current_depth, frame_size, 1);
+			/* Sub one from op2_reg */
+			append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(op2_reg), make_register_operand(op2_reg), make_constant_operand(1), "Convert >= to >", 1));
+			if (is_constant(op1)) {
+				append_mips(mips("slti", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(result_reg), make_register_operand(op2_reg), make_constant_operand(to_int(NULL, op1)), "$c = $b < a", 1));
+			}
+			else {
+				op1_reg = get_register(op1, current_depth, frame_size, 1);
+				append_mips(mips("slt", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op2_reg), make_register_operand(op1_reg), "$c = $b < $a", 1));
+			}
+			break;	
+		case EQ_OP:
+			op1_reg = get_register(op1, current_depth, frame_size, 1);
+			op2_reg = get_register(op2, current_depth, frame_size, 1);
+			append_mips(mips("seq", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a == $b", 1));
+			break;
+		case NE_OP:
+			op1_reg = get_register(op1, current_depth, frame_size, 1);
+			op2_reg = get_register(op2, current_depth, frame_size, 1);
+			append_mips(mips("sne", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a != $b", 1));
+			break;
+		default:
+			fatal("Unrecognised operator!");
+			break;
+	}	
 }
 
 /* Code generate PUSHING a parameter */
@@ -344,6 +420,30 @@ void cg_load_static_link(int depth, int frame_size) {
 			}
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, 0), NULL, "Final static link found", 1));
 			break;
+	}
+}
+
+/* Clear our view of the registers */
+void clear_regs() {
+	int i;
+	for (i = 0; i < REG_COUNT; i++) {
+		regs[i]->contents = NULL;
+		regs[i]->accesses = 0;
+		regs[i]->assignment_id = 0;
+	}
+}
+
+/* Save pertinent $t regs before a fn call in case they get overwritten */
+void save_t_regs(environment *env) {
+	int i = 0;
+	static int f = 0;
+	if (!env || ++f > 2) return;
+	printf("T REG START\n");
+	print_register_view();
+	for (i = 0; i < REG_COUNT; i++) {
+		if (regs[i]->contents) {
+			printf("regs[%d]->contents->environment = %p, Local_env = %p, %d\n", i, regs[i]->contents->stored_in_env, env, regs[i]->contents->variable_number);
+		}
 	}
 }
 
@@ -441,6 +541,9 @@ void write_code(tac_quad *quad) {
 		case TT_FN_CALL:
 			/* Reset param count */
 			param_number = -1;
+			/* Wire out live registers into memory, in-case they're overwritten */
+			save_t_regs(current_fn->data.func->local_env);
+			clear_regs();
 			/* Work out what static link to pass */
 			depth_difference = current_fn->stored_in_env->nested_level - quad->operand1->stored_in_env->nested_level;
 			cg_load_static_link(depth_difference, frame_size);
