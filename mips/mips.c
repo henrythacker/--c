@@ -401,6 +401,7 @@ void cg_if(value *condition, value *true_label, environment *current_env, int fr
 void cg_fn_call(value *result, value *fn_def, environment *current_env, int frame_size) {
 	int result_reg = get_register(result, current_env, frame_size, 0);
 	regs[result_reg]->contents = result;	
+	regs[result_reg]->modified = 1;	
 	/* Pass dynamic link in $a1 */
 	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($a1), make_register_operand($s0), NULL, "Pass dynamic link", 1));
 	append_mips(mips("jal", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("_%s", correct_string_rep(fn_def)), NULL, NULL, "", 1));
@@ -424,6 +425,21 @@ void cg_load_static_link(value *caller, value *callee, int frame_size) {
 		append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, 0), NULL, "Move up one static link", 1));
 		for (i=0; i < diff; i++) {
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($v0, 0), NULL, "Point callee to same static link as mine (caller)", 1));
+		}
+	}
+}
+
+/* Clear registers */
+void clear_regs() {
+	int i = 0;
+	for (i = 0; i < REG_COUNT; i++) {
+		/* Do not save constants and only save back modified values */
+		if (regs[i]->contents) {
+			regs[i]->contents = NULL;
+			regs[i]->accesses = 0;
+			regs[i]->assignment_id = 0;
+			/* Modified value saved */
+			regs[i]->modified = 0;
 		}
 	}
 }
@@ -549,14 +565,16 @@ void write_code(tac_quad *quad) {
 			param_number = -1;			
 			/* Wire out live registers into memory, in-case they're overwritten */
 			save_t_regs();
+			clear_regs();
 			/* Work out what static link to pass */
 			cg_load_static_link(current_fn, quad->operand1, frame_size);
-			cg_fn_call(quad->result, quad->operand1, current_fn->stored_in_env, frame_size);			
+			cg_fn_call(quad->result, quad->operand1, current_fn->stored_in_env, frame_size);		
 			break;
 		case TT_END_FN:
 			nesting_level--;		
 			/* Save regs */
 			save_t_regs();
+			clear_regs();
 			/* Load return address from stack */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Get return address", 1));
 			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "Pop return address from stack", 1));
@@ -581,6 +599,7 @@ void write_code(tac_quad *quad) {
 			}
 			/* Save regs */
 			save_t_regs();
+			clear_regs();
 			/* Load return address from stack */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Get return address", 1));
 			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "Pop return address from stack", 1));
