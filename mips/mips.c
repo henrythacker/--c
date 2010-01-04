@@ -235,11 +235,16 @@ int cg_find_variable(value *variable, environment *current_env, int frame_size, 
 			int depth = (current_env->nested_level - variable->stored_in_env->nested_level) + 1;
 			int i = 0;
 			int num = variable->variable_number;
-			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($s0, 0), NULL, "Move up a static link", 1));
-			for (i = 2; i < depth; i++) {
-				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, 0), NULL, "Move up a static link", 1));
+			if (depth > 1) {
+				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($s0, 0), NULL, "Move up a static link", 1));
+				for (i = 2; i < depth; i++) {
+					append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, 0), NULL, "Move up a static link", 1));
+				}
+				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, -4 * (num + 1)), NULL, "Retrieve variable", 1));
 			}
-			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, -4 * (num + 1)), NULL, "Retrieve variable", 1));
+			else {
+				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($s0, -4 * (num + 1)), NULL, "Retrieve variable", 1));
+			}
 		}
 	}
 	return reg_id;
@@ -423,18 +428,6 @@ void cg_load_static_link(value *caller, value *callee, int frame_size) {
 	}
 }
 
-/* Clear our view of the register with local env values */
-void clear_local_regs() {
-	int i;
-	for (i = 0; i < REG_COUNT; i++) {
-		if (regs[i]->contents && regs[i]->contents->stored_in_env && regs[i]->contents->stored_in_env->static_link == current_fn->stored_in_env) {
-			regs[i]->contents = NULL;
-			regs[i]->accesses = 0;
-			regs[i]->assignment_id = 0;
-		}
-	}
-}
-
 /* Save pertinent $t regs before a fn call in case they get overwritten */
 void save_t_regs() {
 	int i = 0;
@@ -442,6 +435,8 @@ void save_t_regs() {
 		/* Do not save constants and only save back modified values */
 		if (regs[i]->contents && regs[i]->modified && regs[i]->contents->stored_in_env && regs[i]->contents->stored_in_env->static_link == current_fn->stored_in_env) {
 			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand($fp, -4 * (regs[i]->contents->variable_number + 1)), NULL, "Write out used local variable", 1));
+			/* Modified value saved */
+			regs[i]->modified = 0;
 		}
 	}
 }
@@ -554,7 +549,6 @@ void write_code(tac_quad *quad) {
 			param_number = -1;			
 			/* Wire out live registers into memory, in-case they're overwritten */
 			save_t_regs();
-			clear_local_regs();
 			/* Work out what static link to pass */
 			cg_load_static_link(current_fn, quad->operand1, frame_size);
 			cg_fn_call(quad->result, quad->operand1, current_fn->stored_in_env, frame_size);			
@@ -572,13 +566,18 @@ void write_code(tac_quad *quad) {
 			/* Load previous static link */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s0), make_offset_operand($s0, 8), NULL, "Load dynamic link", 1));
 			append_mips(mips("jr", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "Jump to $ra", 1));
-			clear_local_regs();
 			break;
 		case TT_RETURN:
 			/* Save the return value */
 			/* Restore the activation record */
 			if (quad->operand1) {
-				cg_store_in_reg($v0, quad->operand1, current_fn->stored_in_env, frame_size);
+				if (quad->operand1->value_type==VT_FUNCTN) {
+					/* Return address to function */
+					append_mips(mips("la", OT_REGISTER, OT_LABEL, OT_UNSET, make_register_operand($v0), make_label_operand("_%s", correct_string_rep(quad->operand1)), NULL, "Load address of function", 1));
+				}
+				else {
+					cg_store_in_reg($v0, quad->operand1, current_fn->stored_in_env, frame_size);
+				}
 			}
 			/* Save regs */
 			save_t_regs();
