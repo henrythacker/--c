@@ -142,7 +142,7 @@ int choose_best_reg() {
 		regs[optimal_reg]->assignment_id = ++regs_assignments;
 		regs[optimal_reg]->contents = NULL;
 		regs[optimal_reg]->accesses = 1;	
-		regs[position]->modified = 0;			
+		regs[optimal_reg]->modified = 0;			
 		return optimal_reg;
 	}
 	return free_reg;
@@ -445,12 +445,31 @@ void clear_regs() {
 }
 
 /* Save pertinent $t regs before a fn call in case they get overwritten */
-void save_t_regs() {
+void save_t_regs(environment *current_env) {
 	int i = 0;
 	for (i = 0; i < REG_COUNT; i++) {
 		/* Do not save constants and only save back modified values */
-		if (regs[i]->contents && regs[i]->modified && regs[i]->contents->stored_in_env && regs[i]->contents->stored_in_env->static_link == current_fn->stored_in_env) {
-			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand($fp, -4 * (regs[i]->contents->variable_number + 1)), NULL, "Write out used local variable", 1));
+		if (regs[i]->contents && regs[i]->modified && regs[i]->contents->stored_in_env) {
+			if (regs[i]->contents->stored_in_env->static_link == current_fn->stored_in_env) {
+				append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand($fp, -4 * (regs[i]->contents->variable_number + 1)), NULL, "Write out used local variable", 1));
+			}
+			else {
+				value *variable = regs[i]->contents;
+				int reg_id = choose_best_reg();
+				int depth = (current_env->nested_level - variable->stored_in_env->nested_level) + 1;
+				int x = 0;
+				int num = variable->variable_number;
+				if (depth > 1) {
+					append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($s0, 0), NULL, "Move up a static link", 1));
+					for (x = 2; x < depth; x++) {
+						append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, 0), NULL, "Move up a static link", 1));
+					}
+					append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand(reg_id, -4 * (num + 1)), NULL, "Save distant modified variable", 1));
+				}
+				else {
+					append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand($s0, -4 * (num + 1)), NULL, "Save distant modified variable", 1));
+				}
+			}
 			/* Modified value saved */
 			regs[i]->modified = 0;
 		}
@@ -564,7 +583,7 @@ void write_code(tac_quad *quad) {
 			/* Reset param count */
 			param_number = -1;			
 			/* Wire out live registers into memory, in-case they're overwritten */
-			save_t_regs();
+			save_t_regs(current_fn->stored_in_env);
 			clear_regs();
 			/* Work out what static link to pass */
 			cg_load_static_link(current_fn, quad->operand1, frame_size);
@@ -573,7 +592,7 @@ void write_code(tac_quad *quad) {
 		case TT_END_FN:
 			nesting_level--;		
 			/* Save regs */
-			save_t_regs();
+			save_t_regs(current_fn->stored_in_env);
 			clear_regs();
 			/* Load return address from stack */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Get return address", 1));
@@ -598,7 +617,7 @@ void write_code(tac_quad *quad) {
 				}
 			}
 			/* Save regs */
-			save_t_regs();
+			save_t_regs(current_fn->stored_in_env);
 			clear_regs();
 			/* Load return address from stack */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($ra), make_offset_operand($sp, 0), NULL, "Get return address", 1));
