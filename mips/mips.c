@@ -151,6 +151,12 @@ int choose_best_reg() {
 /* Is the value already in a register?? */
 int already_in_reg(value *var) {
 	int position = 0;
+	/* Check if this is a well known function, if so, pass back the address of the label in a register */
+	if (var->value_type == VT_FUNCTN && var->data.func && var->data.func->node_value) {
+		position = choose_best_reg();
+		append_mips(mips("la", OT_REGISTER, OT_LABEL, OT_UNSET, make_register_operand(position), make_label_operand("_%s", correct_string_rep(var)), NULL, "", 1));
+		return position;
+	}
 	/* Machine dependent optimization - use the zero register where possible */
 	if (is_constant(var) && to_int(NULL, var) == 0) return $zero;
 	
