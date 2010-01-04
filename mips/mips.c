@@ -548,11 +548,9 @@ void write_code(tac_quad *quad) {
 			param_number = -1;
 			break;
 		case TT_GOTO:
-			/* Verified: HT */
 			append_mips(mips("j", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand(correct_string_rep(quad->operand1)), NULL, NULL, "", 1));
 			break;
 		case TT_POP_PARAM:
-			/* Verified: HT */
 			++param_number;
 			cg_pop_param(quad->operand1);
 			break;
