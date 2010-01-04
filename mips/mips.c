@@ -517,10 +517,8 @@ void write_code(tac_quad *quad) {
 	ends_seen = 0;
 	switch(quad->type) {
 		case TT_FN_DEF:
-			/* Verified: HT */
 			break;
 		case TT_INIT_FRAME:
-			/* Verified: HT */
 			size = to_int(NULL, quad->operand1);
 			size = activation_record_size(size);
 			frame_size = size;
@@ -533,13 +531,11 @@ void write_code(tac_quad *quad) {
 			append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($s0), make_register_operand($v0), NULL, "Store heap end address in $s0", 1));
 			break;
 		case TT_FN_BODY:
-			/* Verified: HT */
 			/* Save return address in stack */
 			append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "", 1));
 			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s7), make_offset_operand($sp, 0), NULL, "Save return address in stack", 1));
 			break;
 		case TT_BEGIN_FN:
-			/* Verified: HT */
 			nesting_level++;
 			if (nesting_level > 0) {
 				/* Store this node for later processing, if this is a nested fn */
