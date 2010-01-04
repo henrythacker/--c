@@ -203,6 +203,21 @@ void write_activation_record_fn() {
 	append_mips(mips("jr", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "", 1));	
 }
 
+/* Outputs fn that is used to register new function variables */
+void write_register_fn_variable() {
+	operand *comment;
+	comment = make_label_operand("# Make a new function variable entry\n# Precondition: $v0 contains function address, $v1 contains static link\n# Returns: address of allocated fn entry descriptor in $v0");
+	append_mips(mips_comment(comment, 0));
+	append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("rfunc"), NULL, NULL, "", 0));
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($t8), make_constant_operand($v0), NULL, "Backup fn address in $t8", 1));
+	append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($a0), make_constant_operand(8), NULL, "Space required for descriptor", 1));
+	append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($v0), make_constant_operand(9), NULL, "Allocate space systemcode", 1));
+	append_mips(syscall("Allocate space on heap"));
+	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($t8), make_offset_operand($v0, 0), NULL, "Store fn address", 1));
+	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v1), make_offset_operand($v0, 4), NULL, "Store static link", 1));
+	append_mips(mips("jr", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "", 1));	
+}
+
 /* Load a variable in local scope */
 void cg_load_local_var(value *var, int destination_register) {
 	int num = var->variable_number;
@@ -235,16 +250,11 @@ int cg_find_variable(value *variable, environment *current_env, int frame_size, 
 			int depth = (current_env->nested_level - variable->stored_in_env->nested_level) + 1;
 			int i = 0;
 			int num = variable->variable_number;
-			if (depth > 1) {
-				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($s0, 0), NULL, "Move up a static link", 1));
-				for (i = 2; i < depth; i++) {
-					append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, 0), NULL, "Move up a static link", 1));
-				}
-				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, -4 * (num + 1)), NULL, "Retrieve variable", 1));
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($s0, 0), NULL, "Move up a static link", 1));
+			for (i = 2; i < depth; i++) {
+				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, 0), NULL, "Move up a static link", 1));
 			}
-			else {
-				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($s0, -4 * (num + 1)), NULL, "Retrieve variable", 1));
-			}
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, -4 * (num + 1)), NULL, "Retrieve variable", 1));
 		}
 	}
 	return reg_id;
@@ -409,7 +419,7 @@ void cg_fn_call(value *result, value *fn_def, environment *current_env, int fram
 }
 
 /* Generate code to traverse a static link */
-void cg_load_static_link(value *caller, value *callee, int frame_size) {
+void cg_load_static_link(value *caller, value *callee) {
 	int i = 0;
 	if (!caller || !callee) return;
 	if (caller->stored_in_env == callee->stored_in_env) {
@@ -418,7 +428,7 @@ void cg_load_static_link(value *caller, value *callee, int frame_size) {
 	}
 	else if (caller->stored_in_env == callee->stored_in_env->static_link) {
 		/* Directly nested */
-		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($s0), NULL, "Set this current activation record (via $fp) as the static link", 1));			
+		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($fp), NULL, "Set this current activation record (via $fp) as the static link", 1));			
 	}
 	else {
 		int diff = depth_difference(caller->stored_in_env, callee->stored_in_env);
@@ -576,12 +586,29 @@ void write_code(tac_quad *quad) {
 		case TT_FN_CALL:
 			/* Reset param count */
 			param_number = -1;			
-			/* Wire out live registers into memory, in-case they're overwritten */
 			save_t_regs(current_fn->stored_in_env);
 			clear_regs();
-			/* Work out what static link to pass */
-			cg_load_static_link(current_fn, quad->operand1, frame_size);
-			cg_fn_call(quad->result, quad->operand1, current_fn->stored_in_env, frame_size);		
+			/* Wire out live registers into memory, in-case they're overwritten */
+			if (!quad->operand1->data.func->node_value) {
+				/* Dealing with fn variable - we can deduce its entry point & static link from */
+				/* runtime stored information */
+				int fn_variable = get_register(quad->operand1, current_fn->stored_in_env, frame_size, 1);
+				int result_reg = get_register(quad->result, current_fn->stored_in_env, frame_size, 0);
+				int address_reg = choose_best_reg();
+				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(address_reg), make_offset_operand(fn_variable, 0), NULL, "Get Fn address", 1));
+				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand(fn_variable, 4), NULL, "Get static link", 1));
+				regs[result_reg]->contents = quad->result;	
+				regs[result_reg]->modified = 1;	
+				/* Pass dynamic link in $a1 */
+				append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($a1), make_register_operand($s0), NULL, "Pass dynamic link", 1));
+				append_mips(mips("jalr", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand(address_reg), NULL, NULL, "", 1));
+				append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(result_reg), make_register_operand($v0), NULL, "", 1));
+			}
+			else {
+				/* Work out what static link to pass */
+				cg_load_static_link(current_fn, quad->operand1);
+				cg_fn_call(quad->result, quad->operand1, current_fn->stored_in_env, frame_size);		
+			}
 			break;
 		case TT_END_FN:
 			nesting_level--;		
@@ -604,7 +631,11 @@ void write_code(tac_quad *quad) {
 			if (quad->operand1) {
 				if (quad->operand1->value_type==VT_FUNCTN) {
 					/* Return address to function */
-					append_mips(mips("la", OT_REGISTER, OT_LABEL, OT_UNSET, make_register_operand($v0), make_label_operand("_%s", correct_string_rep(quad->operand1)), NULL, "Load address of function", 1));
+					append_mips(mips("la", OT_REGISTER, OT_LABEL, OT_UNSET, make_register_operand($v0), make_label_operand("_%s", correct_string_rep(quad->operand1)), NULL, "Store address of function", 1));
+					append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v1), make_register_operand($fp), NULL, "Store static link to call with", 1));
+					append_mips(mips("jal", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("rfunc"), NULL, NULL, "Register fn variable", 1));
+					/* $v0 now contains fn descriptor, can be used to execute the function in the right way */
+					has_used_fn_variable = 1;
 				}
 				else {
 					cg_store_in_reg($v0, quad->operand1, current_fn->stored_in_env, frame_size);
@@ -642,6 +673,7 @@ void code_gen(NODE *tree) {
 	if (!tree) {
 		fatal("Invalid input");
 	}
+	has_used_fn_variable = 0;
 	regs = (register_contents **) malloc(sizeof(register_contents *) * REG_COUNT);
 	init_register_view();
 	print_register_view();
@@ -653,6 +685,7 @@ void code_gen(NODE *tree) {
 	/* Write out inner fns separately */
 	write_code(pending_code);
 	write_activation_record_fn();
+	if (has_used_fn_variable) write_register_fn_variable();
 	write_epilogue();	
 	print_mips(instructions);
 }

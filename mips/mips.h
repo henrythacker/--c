@@ -41,6 +41,7 @@ typedef struct register_contents {
 register_contents** regs;
 int regs_assignments;
 
+int has_used_fn_variable;
 int param_number;
 int frame_size;
 int nesting_level;
