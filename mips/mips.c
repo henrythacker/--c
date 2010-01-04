@@ -153,6 +153,7 @@ int already_in_reg(value *var) {
 	int position = 0;
 	/* Machine dependent optimization - use the zero register where possible */
 	if (is_constant(var) && to_int(NULL, var) == 0) return $zero;
+	
 	for (position = 0; position < REG_COUNT; position++) {
 		/* Point to same variable OR are equivalent constants */
 		/* Must be sourced from a user accessible register, or the special zero register */
@@ -160,7 +161,7 @@ int already_in_reg(value *var) {
 			if (regs[position]->contents == var) {
 				/* Increment accesses to track how popular this register is */
 				regs[position]->accesses = regs[position]->accesses + 1;
-				regs[position]->assignment_id = ++regs_assignments;			
+				regs[position]->assignment_id = ++regs_assignments;		
 				return position;
 			}
 		}
@@ -173,8 +174,9 @@ int activation_record_size(int local_size) {
 	/* Special fields are: */
 	/* - Previous $fp */
 	/* - Static link */	
-	/* - Dynamic link */	
-	int special_fields = 3; 
+	/* - Dynamic link */
+	/* - Frame size */	
+	int special_fields = 4; 
 	int allocation_size = (word_size * local_size) + (word_size * special_fields);
 	return allocation_size;
 }
@@ -198,7 +200,8 @@ void write_activation_record_fn() {
 	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($t9), make_offset_operand($v0, 4), NULL, "Save old $fp", 1));	
 	/* Save dynamic link */
 	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($a1), make_offset_operand($v0, 8), NULL, "Save dynamic link", 1));	
-
+	/* Save frame size */
+	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($a0), make_offset_operand($v0, 12), NULL, "Save framesize", 1));	
 	/* Jump back */
 	append_mips(mips("jr", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "", 1));	
 }
@@ -250,11 +253,14 @@ int cg_find_variable(value *variable, environment *current_env, int frame_size, 
 			int depth = (current_env->nested_level - variable->stored_in_env->nested_level) + 1;
 			int i = 0;
 			int num = variable->variable_number;
+			int offset_reg = choose_best_reg();
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($s0, 0), NULL, "Move up a static link", 1));
-			for (i = 2; i < depth; i++) {
+			for (i = 1; i < depth; i++) {
 				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, 0), NULL, "Move up a static link", 1));
 			}
-			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, -4 * (num + 1)), NULL, "Retrieve variable", 1));
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(offset_reg), make_offset_operand(reg_id, 12), NULL, "Load framesize for static link", 1));
+			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(offset_reg), make_register_operand(offset_reg), make_register_operand(reg_id), "Seek to $fp [end of AR]", 1));
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(offset_reg, -4 * (num + 1)), NULL, correct_string_rep(variable), 1));
 		}
 	}
 	return reg_id;
@@ -428,7 +434,7 @@ void cg_load_static_link(value *caller, value *callee) {
 	}
 	else if (caller->stored_in_env == callee->stored_in_env->static_link) {
 		/* Directly nested */
-		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($fp), NULL, "Set this current activation record (via $fp) as the static link", 1));			
+		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($s0), NULL, "Set this current activation record as the static link", 1));			
 	}
 	else {
 		int diff = depth_difference(caller->stored_in_env, callee->stored_in_env);
@@ -627,7 +633,7 @@ void write_code(tac_quad *quad) {
 				if (quad->operand1->value_type==VT_FUNCTN) {
 					/* Return address to function */
 					append_mips(mips("la", OT_REGISTER, OT_LABEL, OT_UNSET, make_register_operand($v0), make_label_operand("_%s", correct_string_rep(quad->operand1)), NULL, "Store address of function", 1));
-					append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v1), make_register_operand($fp), NULL, "Store static link to call with", 1));
+					append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v1), make_register_operand($s0), NULL, "Store static link to call with", 1));
 					append_mips(mips("jal", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("rfunc"), NULL, NULL, "Register fn variable", 1));
 					/* $v0 now contains fn descriptor, can be used to execute the function in the right way */
 					has_used_fn_variable = 1;
