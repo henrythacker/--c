@@ -476,10 +476,12 @@ void save_t_regs(environment *current_env) {
 				int x = 0;
 				int num = variable->variable_number;
 				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($s0, 0), NULL, "Move up a static link", 1));
-				for (x = 2; x < depth; x++) {
+				for (x = 1; x < depth; x++) {
 					append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, 0), NULL, "Move up a static link", 1));
 				}
-				append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand(reg_id, -4 * (num + 1)), NULL, "Save distant modified variable", 1));
+				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s6), make_offset_operand(reg_id, 12), NULL, "Load framesize for static link", 1));
+				append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand($s6), make_register_operand($s6), make_register_operand(reg_id), "Seek to $fp [end of AR]", 1));			
+				append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand($s6, -4 * (num + 1)), NULL, "Save distant modified variable", 1));
 			}
 			/* Modified value saved */
 			regs[i]->modified = 0;
