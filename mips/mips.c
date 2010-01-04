@@ -469,16 +469,11 @@ void save_t_regs(environment *current_env) {
 				int depth = (current_env->nested_level - variable->stored_in_env->nested_level) + 1;
 				int x = 0;
 				int num = variable->variable_number;
-				if (depth > 1) {
-					append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($s0, 0), NULL, "Move up a static link", 1));
-					for (x = 2; x < depth; x++) {
-						append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, 0), NULL, "Move up a static link", 1));
-					}
-					append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand(reg_id, -4 * (num + 1)), NULL, "Save distant modified variable", 1));
+				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($s0, 0), NULL, "Move up a static link", 1));
+				for (x = 2; x < depth; x++) {
+					append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, 0), NULL, "Move up a static link", 1));
 				}
-				else {
-					append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand($s0, -4 * (num + 1)), NULL, "Save distant modified variable", 1));
-				}
+				append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand(reg_id, -4 * (num + 1)), NULL, "Save distant modified variable", 1));
 			}
 			/* Modified value saved */
 			regs[i]->modified = 0;
@@ -538,7 +533,7 @@ void write_code(tac_quad *quad) {
 			append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($a0), make_constant_operand(frame_size), NULL, "Store the frame size required for this AR", 1));
 			append_mips(mips("jal", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("mk_ar"), NULL, NULL, "", 1));
 			/* Store a reference to activation record address in $s0 */
-			append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($s0), make_register_operand($v0), NULL, "Store heap end address in $s0", 1));
+			append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($s0), make_register_operand($v0), NULL, "Store heap start address in $s0", 1));
 			break;
 		case TT_FN_BODY:
 			/* Save return address in stack */
