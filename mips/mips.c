@@ -586,10 +586,10 @@ void write_code(tac_quad *quad) {
 		case TT_FN_CALL:
 			/* Reset param count */
 			param_number = -1;			
+			/* Wire out live registers into memory, in-case they're overwritten */
 			save_t_regs(current_fn->stored_in_env);
 			clear_regs();
-			/* Wire out live registers into memory, in-case they're overwritten */
-			if (!quad->operand1->data.func->node_value) {
+			if (!quad->operand1->data.func || !quad->operand1->data.func->node_value) {
 				/* Dealing with fn variable - we can deduce its entry point & static link from */
 				/* runtime stored information */
 				int fn_variable = get_register(quad->operand1, current_fn->stored_in_env, frame_size, 1);
