@@ -92,6 +92,7 @@ void init_register_view() {
 		regs[i]->contents = NULL;
 		regs[i]->accesses = 0;
 		regs[i]->assignment_id = 0;
+		regs[i]->modified = 0;
 	}
 }
 
@@ -102,7 +103,7 @@ void print_register_view() {
 	printf("Register View\n---------------\n");
 	for (i = 0; i < REG_COUNT; i++) {
 		if (register_use_allowed(i) || is_argument_register(i)) {
-			printf("[%s] \t- Contents: [%p - %s] - Accesses: %d - Assignment order: %d\n", register_name(i), regs[i]->contents, regs[i]->contents ? regs[i]->contents->identifier : "EMPTY", regs[i]->accesses, regs[i]->assignment_id);
+			printf("[%s] \t- Contents: [%p - %s] - Modified: %d - Accesses: %d - Assignment order: %d\n", register_name(i), regs[i]->contents, regs[i]->contents ? regs[i]->contents->identifier : "EMPTY", regs[i]->modified, regs[i]->accesses, regs[i]->assignment_id);
 		}
 	}
 }
@@ -114,7 +115,8 @@ int first_free_reg() {
 		if (register_use_allowed(position) && !regs[position]->contents) {
 			regs[position]->assignment_id = ++regs_assignments;			
 			regs[position]->contents = NULL;
-			regs[position]->accesses = 1;			
+			regs[position]->accesses = 1;		
+			regs[position]->modified = 0;	
 			return position;
 		} 
 	}
@@ -139,7 +141,8 @@ int choose_best_reg() {
 		/* TO DO: Move out existing value into heap */
 		regs[optimal_reg]->assignment_id = ++regs_assignments;
 		regs[optimal_reg]->contents = NULL;
-		regs[optimal_reg]->accesses = 1;		
+		regs[optimal_reg]->accesses = 1;	
+		regs[position]->modified = 0;			
 		return optimal_reg;
 	}
 	return free_reg;
@@ -148,6 +151,8 @@ int choose_best_reg() {
 /* Is the value already in a register?? */
 int already_in_reg(value *var) {
 	int position = 0;
+	/* Machine dependent optimization - use the zero register where possible */
+	if (is_constant(var) && to_int(NULL, var) == 0) return $zero;
 	for (position = 0; position < REG_COUNT; position++) {
 		/* Point to same variable OR are equivalent constants */
 		/* Must be sourced from a user accessible register, or the special zero register */
@@ -227,9 +232,14 @@ int cg_find_variable(value *variable, environment *current_env, int frame_size, 
 			cg_load_local_var(variable, reg_id);
 		}
 		else {
-			/* TO DO NEXT - for cplusa */
-			/* Have to try and load this variable from the information stored within activation records */	
-			fatal("test");
+			int depth = (current_env->nested_level - variable->stored_in_env->nested_level) + 1;
+			int i = 0;
+			int num = variable->variable_number;
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($s0, 0), NULL, "Move up a static link", 1));
+			for (i = 2; i < depth; i++) {
+				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, 0), NULL, "Move up a static link", 1));
+			}
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, -4 * (num + 1)), NULL, "Retrieve variable", 1));
 		}
 	}
 	return reg_id;
@@ -346,6 +356,8 @@ void cg_operation(int operation, value *op1, value *op2, value *result, environm
 			fatal("Unrecognised operator!");
 			break;
 	}	
+	/* Set modified flag */
+	regs[result_reg]->modified = 1;
 }
 
 /* Code generate PUSHING a parameter */
@@ -371,6 +383,7 @@ void cg_pop_param(value *operand) {
 void cg_assign(value *result, value *operand1, environment *current_env, int frame_size) {
 	int result_reg = get_register(result, current_env, frame_size, 1);
 	cg_store_in_reg(result_reg, operand1, current_env, frame_size);
+	regs[result_reg]->modified = 1;
 }
 
 /* Code generate an IF statement */
@@ -399,24 +412,26 @@ void cg_load_static_link(value *caller, value *callee, int frame_size) {
 	}
 	else if (caller->stored_in_env == callee->stored_in_env->static_link) {
 		/* Directly nested */
-		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($fp), NULL, "Set this current activation record (via $fp) as the static link", 1));			
+		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($s0), NULL, "Set this current activation record (via $fp) as the static link", 1));			
 	}
 	else {
 		int diff = depth_difference(caller->stored_in_env, callee->stored_in_env);
 		append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, 0), NULL, "Move up one static link", 1));
 		for (i=0; i < diff; i++) {
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($v0, 0), NULL, "Point callee to same static link as mine (caller)", 1));
-		}	
+		}
 	}
 }
 
-/* Clear our view of the registers */
-void clear_regs() {
+/* Clear our view of the register with local env values */
+void clear_local_regs() {
 	int i;
 	for (i = 0; i < REG_COUNT; i++) {
-		regs[i]->contents = NULL;
-		regs[i]->accesses = 0;
-		regs[i]->assignment_id = 0;
+		if (regs[i]->contents && regs[i]->contents->stored_in_env && regs[i]->contents->stored_in_env->static_link == current_fn->stored_in_env) {
+			regs[i]->contents = NULL;
+			regs[i]->accesses = 0;
+			regs[i]->assignment_id = 0;
+		}
 	}
 }
 
@@ -424,7 +439,8 @@ void clear_regs() {
 void save_t_regs() {
 	int i = 0;
 	for (i = 0; i < REG_COUNT; i++) {
-		if (regs[i]->contents && regs[i]->contents->stored_in_env) {
+		/* Do not save constants and only save back modified values */
+		if (regs[i]->contents && regs[i]->modified && regs[i]->contents->stored_in_env && regs[i]->contents->stored_in_env->static_link == current_fn->stored_in_env) {
 			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand($fp, -4 * (regs[i]->contents->variable_number + 1)), NULL, "Write out used local variable", 1));
 		}
 	}
@@ -538,7 +554,7 @@ void write_code(tac_quad *quad) {
 			param_number = -1;			
 			/* Wire out live registers into memory, in-case they're overwritten */
 			save_t_regs();
-			clear_regs();
+			clear_local_regs();
 			/* Work out what static link to pass */
 			cg_load_static_link(current_fn, quad->operand1, frame_size);
 			cg_fn_call(quad->result, quad->operand1, current_fn->stored_in_env, frame_size);			
@@ -556,7 +572,7 @@ void write_code(tac_quad *quad) {
 			/* Load previous static link */
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s0), make_offset_operand($s0, 8), NULL, "Load dynamic link", 1));
 			append_mips(mips("jr", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "Jump to $ra", 1));
-			clear_regs();
+			clear_local_regs();
 			break;
 		case TT_RETURN:
 			/* Save the return value */

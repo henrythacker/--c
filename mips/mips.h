@@ -35,6 +35,7 @@ typedef struct register_contents {
 	value *contents; /* Value stored in the register */
 	int accesses; /* How many times the value has been referenced */
 	int assignment_id; /* What order this assignment was made */
+	int modified;
 }register_contents;
 
 register_contents** regs;
