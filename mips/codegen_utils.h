@@ -4,7 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <time.h>
 #include "environment.h"
+#include "registers.h"
+#include "tacgenerator.h"
 
 #define OT_UNSET 2020
 #define OT_REGISTER 3030
@@ -29,7 +32,7 @@ enum sys_register {
 	$sp = 29,
 	$fp = 30,
 	$ra = 31				
-};
+}sys_register;
 
 typedef struct register_offset {
 	enum sys_register reg;
@@ -56,13 +59,17 @@ typedef struct mips_instruction {
 	struct mips_instruction *next;
 }mips_instruction;
 
+char *register_name(enum sys_register);
+void write_preamble();
+void write_epilogue();
+void write_activation_record_fn();
+void write_register_fn_variable();
 mips_instruction *mips_comment(operand *, int);
 mips_instruction *mips(char *, int, int, int, operand *, operand *, operand *, char *, int);
-operand *make_register_operand(int);
-operand *make_offset_operand();
 operand *make_constant_operand(int);
 operand *make_label_operand(char *, ...);
-char *register_name(enum sys_register);
+operand *make_register_operand(int);
+operand *make_offset_operand();
 mips_instruction *syscall(char *);
 
 #endif
