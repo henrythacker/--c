@@ -24,7 +24,6 @@
 #include <limits.h>
 #include "C.tab.h"
 #include "nodes.h"
-#include "environment2.h"
 #include "conversion.h"
 #include "interpreter.h"
 #include "token.h"

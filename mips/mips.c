@@ -263,7 +263,7 @@ void cg_fn_call(value *result, value *fn_def, environment *current_env, int fram
 	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(result_reg), make_register_operand($v0), NULL, "", 1));
 }
 
-/* Generate code to traverse a static link */
+/* Generate code to traverse a static link - used when calling a function */
 void cg_load_static_link(value *caller, value *callee) {
 	int i = 0;
 	if (!caller || !callee) return;
@@ -276,6 +276,7 @@ void cg_load_static_link(value *caller, value *callee) {
 		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v0), make_register_operand($s0), NULL, "Set this current activation record as the static link", 1));			
 	}
 	else {
+		/* Arbitrarily nested */
 		int diff = depth_difference(caller->stored_in_env, callee->stored_in_env);
 		append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, 0), NULL, "Move up one static link", 1));
 		for (i=0; i < diff; i++) {
@@ -284,9 +285,8 @@ void cg_load_static_link(value *caller, value *callee) {
 	}
 }
 
-/* Write out code */
+/* Main recursive code generation function */
 void write_code(tac_quad *quad) {
-	/* No parameters, 0 = 1 parameter (0 because $a0 is first arg register), so -1 is no args */
 	int depth_difference = 0;
 	int size = 0;
 	int temporary;
