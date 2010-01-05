@@ -11,7 +11,7 @@ clean:
 	rm ${OBJS}
 
 mycc:	${OBJS}
-	${CC} -g $(CPPFLAGS) -o mycc ${OBJS} 
+	${CC} -std=c89 -pedantic -g $(CPPFLAGS) -o mycc ${OBJS} 
 
 lex.yy.c: C.flex
 	flex C.flex
@@ -20,7 +20,7 @@ C.tab.c:	C.y
 	bison -d -t -v C.y
 
 .c.o:
-	${CC} -g $(CPPFLAGS) -c $^
+	${CC} -std=c89 -pedantic -g $(CPPFLAGS) -c $^
 
 depend:	
 	${CC} -M $(SRCS) > .deps

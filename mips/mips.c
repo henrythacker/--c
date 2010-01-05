@@ -71,10 +71,11 @@ void cg_load_local_var(value *var, int destination_register) {
 
 /* Find a variable, load it into a register if not already in one, return the register ID */
 int cg_find_variable(value *variable, environment *current_env, int frame_size, int should_attempt_load) {
+	int reg_id;
 	if (!variable || (!variable->stored_in_env && !is_constant(variable))) {
 		fatal("Could not find variable %s!", correct_string_rep(variable));
 	}
-	int reg_id = already_in_reg(regs, variable, current_env, &has_used_fn_variable);
+	reg_id = already_in_reg(regs, variable, current_env, &has_used_fn_variable);
 	if (reg_id == REG_VALUE_NOT_AVAILABLE) {
 		reg_id = choose_best_reg(regs, current_env);
 		regs[reg_id]->contents = variable;
@@ -467,13 +468,14 @@ void reset_globals() {
 
 /* Generate MIPS code for given tree */
 void code_gen(NODE *tree) {
+	tac_quad *quad = NULL;
 	if (!tree) {
 		fatal("Invalid input");
 	}
 	has_used_fn_variable = 0;
 	regs = (register_contents **) malloc(sizeof(register_contents *) * REG_COUNT);
 	init_register_view(regs);
-	tac_quad *quad = start_tac_gen(tree);
+ 	quad = start_tac_gen(tree);
 	write_preamble();
 	reset_globals();
 	write_code(quad);

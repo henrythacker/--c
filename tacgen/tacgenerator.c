@@ -270,11 +270,13 @@ void build_while_stmt(environment *env, NODE *node, int while_count, int if_coun
 
 /* Register params in environment */
 void register_params(environment *env, value *param_list) {
+	value *current_param;
 	if (!param_list) return;
-	value *current_param = param_list;
+	current_param = param_list;
 	while (current_param!=NULL) {
 		value *param = NULL;
-		value *param_name = string_value(current_param->identifier);
+		value *param_name;
+		param_name = string_value(current_param->identifier);
 		switch(current_param->value_type) {	
 			case VT_INTEGR:
 				param = assign(env, param_name, int_value(0), 1);
@@ -526,12 +528,13 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 			/* Lookup function */
 			temp = search(env, to_string(val1), VT_FUNCTN, VT_ANY, 1);
 			if (temp) {
+				int fn_return_type;
 				append_code(prepare_fn(val2));
 				append_code(push_params(env, val2));
 				/* If we can't typecheck, set a special UNDEFINED flag to say we can't */
 				/* typecheck. This can happen with function variables, we do not EASILY know the */
 				/* return type of the functions they are bound to until runtime. */
-				int fn_return_type = UNDEFINED;
+				fn_return_type = UNDEFINED;
 				if (temp->data.func) {
 					fn_return_type = temp->data.func->return_type;	
 				} 
@@ -574,9 +577,10 @@ value *make_simple(environment *env, NODE *node, int flag, int return_type) {
 
 /* Start the TAC generator process at the top of the AST */
 tac_quad *start_tac_gen(NODE *tree) {
-	null_fn = build_null_function();
 	/* Do a scan for function definitions first */
-	environment *initial_env = create_environment(NULL);
+	environment *initial_env;
+	initial_env = create_environment(NULL);
+	null_fn = build_null_function();
 	make_simple(initial_env, tree, INTERPRET_FN_SCAN, INT);
 	/* Actually generate the TAC */
 	make_simple(initial_env, tree, 0, 0);

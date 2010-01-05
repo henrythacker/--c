@@ -51,8 +51,9 @@ int matching_return_type(value *val, int type) {
 value *search(environment *env, char *identifier, int value_type, int return_type, int recursive) {
 	/* Find out what position in the hashtable the value should be stored in */
 	int hash_position = environment_hash(identifier);
+	value *a_value;
 	if (env == NULL) return NULL;
-	value *a_value = env->values[hash_position];
+	a_value = env->values[hash_position];
 	/* Try and find the matching value */
 	while (a_value) {
 		if (matching_names(a_value, identifier) && matching_types(a_value, value_type) && matching_return_type(a_value, return_type)) {
@@ -119,11 +120,13 @@ void debug_print_value(value *val) {
 
 /* Register actual parameters in environment */
 void define_parameters(environment *env, value *formal, value *actual, environment *search_env) {
-	if (param_count(formal) != param_count(actual)) return;
-	value *formal_param = formal->data.func->params;
-	value *actual_param = actual;	
+	value *formal_param;
+	value *actual_param;
 	value *tmp;
 	int dealtWith = 0;
+	if (param_count(formal) != param_count(actual)) return;
+	formal_param = formal->data.func->params;
+	actual_param = actual;
 	while(formal_param && actual_param) {
 		/* Type check assignment */
 		if (actual_param->value_type == VT_STRING) {
@@ -185,11 +188,12 @@ value *store_function(environment *env, value *func, environment *local_env) {
 /* Store variable in environment */
 value *store(environment *env, int value_type, char *identifier, value *val, int is_param, int is_declarator, int is_fn_dec, int is_temporary) {
 	value *new_value;
+	int hash_position;
 	/* Check entry will be valid */
 	if (!identifier || (!val && value_type!=VT_VOID)) return NULL;
 	if (val && val->value_type==VT_STRING) return NULL;
 	/* Find out what position in the hashtable the value should be stored in */
-	int hash_position = environment_hash(identifier);
+ 	hash_position = environment_hash(identifier);
 	/* The environment must be valid */
 	if (!env) return NULL;
 	/* Check for redefinition */

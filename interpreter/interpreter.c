@@ -18,10 +18,11 @@ value *assign(environment *env, value *identifier, value *data, int is_declarato
 /* Count number of parameters */
 int param_count(value *val) {
 	int count = 0;
+	value *current_param;
 	if (val == NULL) return 0;
 	if (val->value_type == VT_FUNCTN) {
 		if (val->data.func->params == NULL) return 0;
-		value *current_param = val->data.func->params; 
+		 current_param = val->data.func->params; 
 		while (current_param) {
 			current_param = current_param->next;
 			count++;
@@ -29,7 +30,7 @@ int param_count(value *val) {
 	}
 	else {
 		/* We must have a function call with some chain of parameters to count */
-		value *current_param = val; 
+		current_param = val; 
 		while (current_param) {
 			current_param = current_param->next;
 			count++;
