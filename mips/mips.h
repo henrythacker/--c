@@ -12,6 +12,7 @@
 #include "tacgenerator.h"
 #include "interpreter.h"
 #include "codegen_utils.h"
+#include "optimisation.h"
 
 /* Fn prototypes */
 void code_gen(NODE *);

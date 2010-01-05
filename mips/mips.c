@@ -510,5 +510,7 @@ void code_gen(NODE *tree) {
 	write_activation_record_fn();
 	if (has_used_fn_variable) write_register_fn_variable();
 	write_epilogue();	
+	/* Perform basic optimisation */
+	instructions = do_optimise(instructions);
 	print_mips(instructions);
 }
