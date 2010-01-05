@@ -33,8 +33,8 @@ int depth_difference(environment *caller_env, environment *callee_env) {
 
 /* Valid register - can the USER utilise the given register? */
 int register_use_allowed(int reg_id) {
-	/* can use all $t0-$t7 registers */
-	return (reg_id >= $t0 && reg_id <= $t7);
+	/* can use all $t0-$t9 registers */
+	return (reg_id >= $t0 && reg_id <= $t7) || (reg_id == $t8 || reg_id == $t9);
 }
 
 int is_argument_register(int reg_id) {
@@ -108,6 +108,55 @@ void print_register_view() {
 	}
 }
 
+/* Clear registers */
+void clear_regs() {
+	int i = 0;
+	for (i = 0; i < REG_COUNT; i++) {
+		/* Do not save constants and only save back modified values */
+		if (regs[i]->contents) {
+			regs[i]->contents = NULL;
+			regs[i]->accesses = 0;
+			regs[i]->assignment_id = 0;
+			/* Modified value saved */
+			regs[i]->modified = 0;
+		}
+	}
+}
+
+/* Save a specific $t reg, if applicable */
+void save_t_reg(int i, environment *current_env) {
+	/* Do not save constants and only save back modified values */
+	if (regs[i]->contents && regs[i]->modified && regs[i]->contents->stored_in_env) {
+		if (regs[i]->contents->stored_in_env->static_link == current_fn->stored_in_env) {
+			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand($fp, -4 * (regs[i]->contents->variable_number + 1)), NULL, "Write out used local variable", 1));
+		}
+		else {
+			value *variable = regs[i]->contents;
+			int reg_id = choose_best_reg();
+			int depth = (current_env->nested_level - variable->stored_in_env->nested_level) + 1;
+			int x = 0;
+			int num = variable->variable_number;
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($s0, 0), NULL, "Move up a static link", 1));
+			for (x = 1; x < depth; x++) {
+				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, 0), NULL, "Move up a static link", 1));
+			}
+			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s6), make_offset_operand(reg_id, 12), NULL, "Load framesize for static link", 1));
+			append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand($s6), make_register_operand($s6), make_register_operand(reg_id), "Seek to $fp [end of AR]", 1));			
+			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand($s6, -4 * (num + 1)), NULL, "Save distant modified variable", 1));
+		}
+		/* Modified value saved */
+		regs[i]->modified = 0;
+	}
+}
+
+/* Save pertinent $t regs before a fn call in case they get overwritten */
+void save_t_regs(environment *current_env) {
+	int i = 0;
+	for (i = 0; i < REG_COUNT; i++) {
+		save_t_reg(i, current_env);
+	}
+}
+
 /* Find the first free register, if any */
 int first_free_reg() {
 	int position = 0;
@@ -138,7 +187,10 @@ int choose_best_reg() {
 				}
 			}
 		}
-		/* TO DO: Move out existing value into heap */
+		/* Move out existing value that is being spilled */
+		if (regs[optimal_reg]->contents->stored_in_env) {
+			save_t_reg(optimal_reg, current_fn->stored_in_env);
+		}
 		regs[optimal_reg]->assignment_id = ++regs_assignments;
 		regs[optimal_reg]->contents = NULL;
 		regs[optimal_reg]->accesses = 1;	
@@ -200,16 +252,16 @@ void write_activation_record_fn() {
 	comment = make_label_operand("# Make a new activation record\n# Precondition: $a0 contains total required heap size, $a1 contains dynamic link, $v0 contains static link\n# Returns: start of heap address in $v0, heap contains reference to static link and old $fp value");
 	append_mips(mips_comment(comment, 0));
 	append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("mk_ar"), NULL, NULL, "", 0));
-	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($t8), make_constant_operand($v0), NULL, "Backup static link in $t8", 1));
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($s1), make_constant_operand($v0), NULL, "Backup static link in $s1", 1));
 	append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($v0), make_constant_operand(9), NULL, "Allocate space systemcode", 1));
 	append_mips(syscall("Allocate space on heap"));
-	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($t9), make_constant_operand($fp), NULL, "Backup old $fp in $t9", 1));
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($s2), make_constant_operand($fp), NULL, "Backup old $fp in $s2", 1));
 	/* Point $fp to the correct place */
 	append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand($fp), make_register_operand($v0), make_register_operand($a0), "$fp = heap start address + heap size", 1));
 	/* Save static link */
-	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($t8), make_offset_operand($v0, 0), NULL, "Save static link", 1));
+	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s1), make_offset_operand($v0, 0), NULL, "Save static link", 1));
 	/* Save old $fp */
-	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($t9), make_offset_operand($v0, 4), NULL, "Save old $fp", 1));	
+	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s2), make_offset_operand($v0, 4), NULL, "Save old $fp", 1));	
 	/* Save dynamic link */
 	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($a1), make_offset_operand($v0, 8), NULL, "Save dynamic link", 1));	
 	/* Save frame size */
@@ -224,11 +276,11 @@ void write_register_fn_variable() {
 	comment = make_label_operand("# Make a new function variable entry\n# Precondition: $v0 contains function address, $v1 contains static link\n# Returns: address of allocated fn entry descriptor in $v0");
 	append_mips(mips_comment(comment, 0));
 	append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("rfunc"), NULL, NULL, "", 0));
-	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($t8), make_constant_operand($v0), NULL, "Backup fn address in $t8", 1));
+	append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($s1), make_constant_operand($v0), NULL, "Backup fn address in $s1", 1));
 	append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($a0), make_constant_operand(8), NULL, "Space required for descriptor", 1));
 	append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand($v0), make_constant_operand(9), NULL, "Allocate space systemcode", 1));
 	append_mips(syscall("Allocate space on heap"));
-	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($t8), make_offset_operand($v0, 0), NULL, "Store fn address", 1));
+	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s1), make_offset_operand($v0, 0), NULL, "Store fn address", 1));
 	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v1), make_offset_operand($v0, 4), NULL, "Store static link", 1));
 	append_mips(mips("jr", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand($ra), NULL, NULL, "", 1));	
 }
@@ -453,50 +505,6 @@ void cg_load_static_link(value *caller, value *callee) {
 		append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($s0, 0), NULL, "Move up one static link", 1));
 		for (i=0; i < diff; i++) {
 			append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand($v0, 0), NULL, "Point callee to same static link as mine (caller)", 1));
-		}
-	}
-}
-
-/* Clear registers */
-void clear_regs() {
-	int i = 0;
-	for (i = 0; i < REG_COUNT; i++) {
-		/* Do not save constants and only save back modified values */
-		if (regs[i]->contents) {
-			regs[i]->contents = NULL;
-			regs[i]->accesses = 0;
-			regs[i]->assignment_id = 0;
-			/* Modified value saved */
-			regs[i]->modified = 0;
-		}
-	}
-}
-
-/* Save pertinent $t regs before a fn call in case they get overwritten */
-void save_t_regs(environment *current_env) {
-	int i = 0;
-	for (i = 0; i < REG_COUNT; i++) {
-		/* Do not save constants and only save back modified values */
-		if (regs[i]->contents && regs[i]->modified && regs[i]->contents->stored_in_env) {
-			if (regs[i]->contents->stored_in_env->static_link == current_fn->stored_in_env) {
-				append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand($fp, -4 * (regs[i]->contents->variable_number + 1)), NULL, "Write out used local variable", 1));
-			}
-			else {
-				value *variable = regs[i]->contents;
-				int reg_id = choose_best_reg();
-				int depth = (current_env->nested_level - variable->stored_in_env->nested_level) + 1;
-				int x = 0;
-				int num = variable->variable_number;
-				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($s0, 0), NULL, "Move up a static link", 1));
-				for (x = 1; x < depth; x++) {
-					append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand(reg_id, 0), NULL, "Move up a static link", 1));
-				}
-				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s6), make_offset_operand(reg_id, 12), NULL, "Load framesize for static link", 1));
-				append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand($s6), make_register_operand($s6), make_register_operand(reg_id), "Seek to $fp [end of AR]", 1));			
-				append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(i), make_offset_operand($s6, -4 * (num + 1)), NULL, "Save distant modified variable", 1));
-			}
-			/* Modified value saved */
-			regs[i]->modified = 0;
 		}
 	}
 }
