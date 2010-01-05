@@ -22,8 +22,10 @@ tac_quad *entry_point;
 /* Location that code is written to */
 mips_instruction *instructions;
 
+/* Our compiler's view of all of the MIPS registers during compilation */
 register_contents** regs;
 
+/* Global variables */
 int has_used_fn_variable;
 value *current_fn;
 
