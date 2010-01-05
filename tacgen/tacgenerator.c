@@ -82,6 +82,7 @@ void print_tac(tac_quad *quad) {
 			break;			
 		default:
 			fatal("Unknown TAC Quad type '%d'", quad->type);
+			break;
 	}
 	print_tac(quad->next);
 }

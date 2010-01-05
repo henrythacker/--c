@@ -42,6 +42,7 @@ typedef struct tac_quad {
 	value *result;
 	int type;
 	int subtype;
+	int level; /* Used for MIPS code generation */
 	struct tac_quad *next;		
 }tac_quad;
 

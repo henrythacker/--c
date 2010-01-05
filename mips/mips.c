@@ -285,44 +285,76 @@ void cg_load_static_link(value *caller, value *callee) {
 	}
 }
 
+/* Number TAC nesting levels */
+void number_tac_levels(tac_quad *top) {
+	int current_level = 0;
+	while (top) {
+		switch(top->type) { 
+			case TT_BEGIN_FN:
+				current_level++;
+				top->level = current_level;
+				break;
+			case TT_END_FN:
+				top->level = current_level;
+				current_level--;
+				break;
+			default:
+				top->level = current_level;
+				break;
+		}
+		top = top->next;
+	}
+}
+
+/* Bubblesort the linked list */
+tac_quad *linked_sort(tac_quad *input) { 
+	tac_quad *current, *next, *previous, *tmp;
+	int swaps;
+	swaps = 1;
+	while (swaps) {
+		swaps = 0;
+		current = input;
+		next = current->next;
+		previous = NULL;
+		while (current && next && current!=next) {
+			if (current->level > next->level) {
+				swaps = 1;
+				/* Is this the head element? */
+				if (!previous) {
+					tmp = next->next;
+					next->next = current;
+					current->next = tmp;
+					/* Repoint head */
+					input = next;
+					previous = next;
+				}
+				else {
+					tmp = next->next;
+					next->next = current;
+					current->next = tmp;
+					previous->next = next;
+					previous = next;
+				}
+			}
+			else {
+				/* Skip over elements - correct sorting already */
+				previous = current;
+				current = current->next;
+			}
+			next = current->next;
+		}
+	}
+	/* Return the sorted version */
+	return input;
+}
+
+
 /* Main recursive code generation function */
 void write_code(tac_quad *quad) {
 	int depth_difference = 0;
 	int size = 0;
 	int temporary;
-	static int begins_seen = 0;
-	static int ends_seen = 0;	
-	if (!quad) return;
-	/* Reorder the TAC so that inner fns are moved out */
-	if (nesting_level > 0) {
-		/* Copy the TAC quad, in order to discard the next ptr */
-		tac_quad *new_quad = make_quad_value(quad->op, quad->operand1, quad->operand2, quad->result, quad->type, quad->subtype);
-		if (!pending_code) {
-			pending_code = new_quad;
-		}
-		else {
-			/* Append the TAC */
-			tac_quad *tmp_quad = pending_code;
-			while (tmp_quad->next != NULL) {
-				tmp_quad = tmp_quad->next;
-			}
-			tmp_quad->next = new_quad;
-		}
-		if (quad->type == TT_BEGIN_FN) {;
-			begins_seen++;
-		}
-		if (quad->type == TT_END_FN) {
-			ends_seen++;			
-		}
-		if (begins_seen == ends_seen) {
-			/* Decrement nesting_level */
-			--nesting_level;
-		}
-		write_code(quad->next);
-		return;
-	}
-	begins_seen = 0;
-	ends_seen = 0;
+	if (quad==NULL) return;
 	switch(quad->type) {
 		case TT_FN_DEF:
 			break;
@@ -344,22 +376,14 @@ void write_code(tac_quad *quad) {
 			append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($s7), make_offset_operand($sp, 0), NULL, "Save return address in stack", 1));
 			break;
 		case TT_BEGIN_FN:
-			nesting_level++;
-			if (nesting_level > 0) {
-				/* Store this node for later processing, if this is a nested fn */
-				write_code(quad);
-				return;
-			}
 			if (strcmp(correct_string_rep(quad->operand1), "main")==0) entry_point = quad; 
 			current_fn = quad->operand1;
 			append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("_%s", correct_string_rep(quad->operand1)), NULL, NULL, "", 0));
-			param_number = -1;
 			break;
 		case TT_GOTO:
 			append_mips(mips("j", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand(correct_string_rep(quad->operand1)), NULL, NULL, "", 1));
 			break;
 		case TT_POP_PARAM:
-			++param_number;
 			cg_pop_param(quad->operand1);
 			break;
 		case TT_LABEL:
@@ -369,11 +393,9 @@ void write_code(tac_quad *quad) {
 			cg_assign(quad->result, quad->operand1, current_fn->stored_in_env, frame_size);
 			break;
 		case TT_PUSH_PARAM:
-			++param_number;
 			cg_push_param(quad->operand1, current_fn->stored_in_env, frame_size);
 			break;
 		case TT_PREPARE:
-			param_number = -1;
 			break;
 		case TT_IF:
 			cg_if(quad->operand1, quad->result, current_fn->stored_in_env, frame_size);
@@ -382,8 +404,6 @@ void write_code(tac_quad *quad) {
 			cg_operation(quad->subtype, quad->operand1, quad->operand2, quad->result, current_fn->stored_in_env, frame_size);
 			break;
 		case TT_FN_CALL:
-			/* Reset param count */
-			param_number = -1;			
 			/* Wire out live registers into memory, in-case they're overwritten */
 			save_t_regs(regs, current_fn->stored_in_env);
 			clear_regs(regs);
@@ -409,7 +429,6 @@ void write_code(tac_quad *quad) {
 			}
 			break;
 		case TT_END_FN:
-			nesting_level--;		
 			/* Save regs */
 			save_t_regs(regs, current_fn->stored_in_env);
 			clear_regs(regs);
@@ -460,9 +479,7 @@ void write_code(tac_quad *quad) {
 
 /* Reset global variables to their defaults before running write_code each time */
 void reset_globals() {
-	param_number = -1;
 	frame_size = 0;
-	nesting_level = -1;
 	current_fn = NULL;
 }
 
@@ -476,6 +493,11 @@ void code_gen(NODE *tree) {
 	regs = (register_contents **) malloc(sizeof(register_contents *) * REG_COUNT);
 	init_register_view(regs);
  	quad = start_tac_gen(tree);
+	/* Identify nesting within TAC elements */
+	number_tac_levels(quad);
+	/* Bubble sort according to level */
+	quad = linked_sort(quad);
+	/* Write code header */
 	write_preamble();
 	reset_globals();
 	write_code(quad);

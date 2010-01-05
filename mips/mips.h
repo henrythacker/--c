@@ -30,9 +30,7 @@ mips_instruction *instructions;
 register_contents** regs;
 
 int has_used_fn_variable;
-int param_number;
 int frame_size;
-int nesting_level;
 value *current_fn;
 
 #endif
