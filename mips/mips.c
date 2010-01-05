@@ -110,6 +110,7 @@ int cg_find_variable(value *variable, environment *current_env, int should_attem
 	return reg_id;
 }
 
+/* Store a value in a given register */
 void cg_store_in_reg(int reg, value *operand, environment *current_env) {
 	if (is_constant(operand)) {
 		append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand(reg), make_constant_operand(to_int(NULL, operand)), NULL, "", 1));

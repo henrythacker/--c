@@ -1,8 +1,6 @@
 #ifndef __MIPS_H
 #define __MIPS_H
 
-#define ACTIVATION_RECORD_SIZE  (local_size(quad->operand1) + 2) * 4
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
