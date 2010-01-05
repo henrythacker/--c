@@ -154,7 +154,13 @@ int already_in_reg(value *var) {
 	/* Check if this is a well known function, if so, pass back the address of the label in a register */
 	if (var->value_type == VT_FUNCTN && var->data.func && var->data.func->node_value) {
 		position = choose_best_reg();
-		append_mips(mips("la", OT_REGISTER, OT_LABEL, OT_UNSET, make_register_operand(position), make_label_operand("_%s", correct_string_rep(var)), NULL, "", 1));
+		/* Return address to function */
+		append_mips(mips("la", OT_REGISTER, OT_LABEL, OT_UNSET, make_register_operand($v0), make_label_operand("_%s", correct_string_rep(var)), NULL, "Store address of function", 1));
+		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand($v1), make_register_operand($s0), NULL, "Store static link to call with", 1));
+		append_mips(mips("jal", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand("rfunc"), NULL, NULL, "Register fn variable", 1));
+		/* $v0 now contains fn descriptor, can be used to execute the function in the right way */
+		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(position), make_register_operand($v0), NULL, "Return fn descriptor address", 1));
+		has_used_fn_variable = 1;
 		return position;
 	}
 	/* Machine dependent optimization - use the zero register where possible */
