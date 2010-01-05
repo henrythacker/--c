@@ -1,5 +1,13 @@
 #include "tacgenerator.h"
 
+/**
+*	tacgenerator.c by Henry Thacker
+*
+*	Basic Three Address Code generator. TAC is generated directly from parsed AST.
+*   The generated TAC is used to generate target code for MIPS.
+*
+*/
+
 /* Register temporary in the specified environment */
 value *register_temporary(environment *env, char *temp_name, value *null_value) {
 	value *reference = NULL;

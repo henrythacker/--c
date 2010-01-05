@@ -21,16 +21,12 @@ void code_gen(NODE *);
 /* Store reference to entry point */
 tac_quad *entry_point;
 
-/* Store pending code that can't be processed immediately */
-tac_quad *pending_code;
-
 /* Location that code is written to */
 mips_instruction *instructions;
 
 register_contents** regs;
 
 int has_used_fn_variable;
-int frame_size;
 value *current_fn;
 
 #endif

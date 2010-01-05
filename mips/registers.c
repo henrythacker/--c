@@ -1,5 +1,12 @@
 #include "registers.h"
 
+/**
+*	registers.c by Henry Thacker
+*
+*	Utilities to work with state of MIPS registers while code generation takes place
+*
+*/
+
 /* Initialise our global view of register allocation */
 void init_register_view(register_contents **regs) {
 	int i;

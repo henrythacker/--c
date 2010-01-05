@@ -1,5 +1,12 @@
 #include "utilities.h"
 
+/**
+*	utilities.c by Henry Thacker
+*
+*	Generic utility functions used throughout the project
+*
+*/
+
 /* Assertion with error text */
 void assert(int assertion, char *error) {
 	if (!assertion) {

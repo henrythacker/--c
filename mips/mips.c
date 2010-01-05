@@ -1,5 +1,12 @@
 #include "mips.h"
 
+/**
+*	mips.c by Henry Thacker
+*
+*	Basic code generator to MIPS assembly language from TAC representation
+*
+*/
+
 /* Append MIPS code to generated code stack */
 void append_mips(struct mips_instruction *ins) {
 	/* Are there any existing instructions? */
@@ -59,9 +66,7 @@ int activation_record_size(int local_size) {
 	return allocation_size;
 }
 
-/*
-* VARIABLE FNS
-*/
+/* ==== VARIABLE FNS ==== */
 
 /* Load a variable in local scope */
 void cg_load_local_var(value *var, int destination_register) {
@@ -70,7 +75,7 @@ void cg_load_local_var(value *var, int destination_register) {
 }
 
 /* Find a variable, load it into a register if not already in one, return the register ID */
-int cg_find_variable(value *variable, environment *current_env, int frame_size, int should_attempt_load) {
+int cg_find_variable(value *variable, environment *current_env, int should_attempt_load) {
 	int reg_id;
 	if (!variable || (!variable->stored_in_env && !is_constant(variable))) {
 		fatal("Could not find variable %s!", correct_string_rep(variable));
@@ -105,20 +110,20 @@ int cg_find_variable(value *variable, environment *current_env, int frame_size, 
 	return reg_id;
 }
 
-void cg_store_in_reg(int reg, value *operand, environment *current_env, int frame_size) {
+void cg_store_in_reg(int reg, value *operand, environment *current_env) {
 	if (is_constant(operand)) {
 		append_mips(mips("li", OT_REGISTER, OT_CONSTANT, OT_UNSET, make_register_operand(reg), make_constant_operand(to_int(NULL, operand)), NULL, "", 1));
 	}
 	else {
-		int value_reg = cg_find_variable(operand, current_env, frame_size, 1);
+		int value_reg = cg_find_variable(operand, current_env, 1);
 		/* Make the assignment */
 		append_mips(mips("move", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(reg), make_register_operand(value_reg), NULL, "Assign values", 1));	
 	}
 }
 
 /* Either return the existing register that has been used to store a variable in, or insert into new register */
-int get_register(value *variable, environment *current_env, int frame_size, int must_already_exist) {
-	int reg_id = cg_find_variable(variable, current_env, frame_size, must_already_exist);
+int get_register(value *variable, environment *current_env, int must_already_exist) {
+	int reg_id = cg_find_variable(variable, current_env, must_already_exist);
 	if (reg_id == REG_VALUE_NOT_AVAILABLE) {
 		if (must_already_exist) {
 			fatal("Could not find variable %s", correct_string_rep(variable));
@@ -129,87 +134,86 @@ int get_register(value *variable, environment *current_env, int frame_size, int 
 	return reg_id;
 }
 
-/*
-* END VARIABLE FNS
-*/
+/* ==== CODE GENERATION ==== */
+
 
 /* Generate code for an operation */
-void cg_operation(int operation, value *op1, value *op2, value *result, environment *current_env, int frame_size) {
-	int result_reg = get_register(result, current_env, frame_size, 0);
+void cg_operation(int operation, value *op1, value *op2, value *result, environment *current_env) {
+	int result_reg = get_register(result, current_env, 0);
 	int op1_reg = -1;
 	int op2_reg = -1;
 	switch(operation) {
 		case '+':
-			op1_reg = get_register(op1, current_env, frame_size, 1);
+			op1_reg = get_register(op1, current_env, 1);
 			if (is_constant(op2)) {
 				append_mips(mips("addi", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(result_reg), make_register_operand(op1_reg), make_constant_operand(to_int(NULL, op2)), "", 1));
 			}
 			else {
-				op2_reg = get_register(op2, current_env, frame_size, 1);
+				op2_reg = get_register(op2, current_env, 1);
 				append_mips(mips("add", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "", 1));
 			}
 			break;
 		case '-':
-			op1_reg = get_register(op1, current_env, frame_size, 1);
+			op1_reg = get_register(op1, current_env, 1);
 			if (is_constant(op2)) {
 				append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(result_reg), make_register_operand(op1_reg), make_constant_operand(to_int(NULL, op2)), "", 1));
 			}
 			else {
-				op2_reg = get_register(op2, current_env, frame_size, 1);
+				op2_reg = get_register(op2, current_env, 1);
 				append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "", 1));
 			}
 			break;
 		case '*':
-			op1_reg = get_register(op1, current_env, frame_size, 1);
-			op2_reg = get_register(op2, current_env, frame_size, 1);
+			op1_reg = get_register(op1, current_env, 1);
+			op2_reg = get_register(op2, current_env, 1);
 			append_mips(mips("mult", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(op1_reg), make_register_operand(op2_reg), NULL, "", 1));
 			append_mips(mips("mflo", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand(result_reg), NULL, NULL, "", 1));			
 			break;	
 		case '/':
-			op1_reg = get_register(op1, current_env, frame_size, 1);
-			op2_reg = get_register(op2, current_env, frame_size, 1);
+			op1_reg = get_register(op1, current_env, 1);
+			op2_reg = get_register(op2, current_env, 1);
 			append_mips(mips("div", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(op1_reg), make_register_operand(op2_reg), NULL, "", 1));
 			append_mips(mips("mflo", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand(result_reg), NULL, NULL, "", 1));
 			break;
 		case '%':
-			op1_reg = get_register(op1, current_env, frame_size, 1);
-			op2_reg = get_register(op2, current_env, frame_size, 1);
+			op1_reg = get_register(op1, current_env, 1);
+			op2_reg = get_register(op2, current_env, 1);
 			append_mips(mips("div", OT_REGISTER, OT_REGISTER, OT_UNSET, make_register_operand(op1_reg), make_register_operand(op2_reg), NULL, "", 1));
 			append_mips(mips("mfhi", OT_REGISTER, OT_UNSET, OT_UNSET, make_register_operand(result_reg), NULL, NULL, "", 1));
 			break;
 		case '<':
-			op1_reg = get_register(op1, current_env, frame_size, 1);
+			op1_reg = get_register(op1, current_env, 1);
 			if (is_constant(op2)) {
 				append_mips(mips("slti", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand(result_reg), make_register_operand(op1_reg), make_constant_operand(to_int(NULL, op2)), "$c = $a < b", 1));				
 			}
 			else {
-				op2_reg = get_register(op2, current_env, frame_size, 1);
+				op2_reg = get_register(op2, current_env, 1);
 				append_mips(mips("slti", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a < $b", 1));											
 			}
 			break;
 		case '>':
-			op1_reg = get_register(op1, current_env, frame_size, 1);
-			op2_reg = get_register(op2, current_env, frame_size, 1);
+			op1_reg = get_register(op1, current_env, 1);
+			op2_reg = get_register(op2, current_env, 1);
 			append_mips(mips("sgt", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a > $b", 1));
 			break;
 		case LE_OP:
-			op1_reg = get_register(op1, current_env, frame_size, 1);
-			op2_reg = get_register(op2, current_env, frame_size, 1);
+			op1_reg = get_register(op1, current_env, 1);
+			op2_reg = get_register(op2, current_env, 1);
 			append_mips(mips("sle", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a <= $b", 1));
 			break;
 		case GE_OP:
-			op1_reg = get_register(op1, current_env, frame_size, 1);
-			op2_reg = get_register(op2, current_env, frame_size, 1);
+			op1_reg = get_register(op1, current_env, 1);
+			op2_reg = get_register(op2, current_env, 1);
 			append_mips(mips("sge", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a >= $b", 1));
 			break;	
 		case EQ_OP:
-			op1_reg = get_register(op1, current_env, frame_size, 1);
-			op2_reg = get_register(op2, current_env, frame_size, 1);
+			op1_reg = get_register(op1, current_env, 1);
+			op2_reg = get_register(op2, current_env, 1);
 			append_mips(mips("seq", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a == $b", 1));
 			break;
 		case NE_OP:
-			op1_reg = get_register(op1, current_env, frame_size, 1);
-			op2_reg = get_register(op2, current_env, frame_size, 1);
+			op1_reg = get_register(op1, current_env, 1);
+			op2_reg = get_register(op2, current_env, 1);
 			append_mips(mips("sne", OT_REGISTER, OT_REGISTER, OT_REGISTER, make_register_operand(result_reg), make_register_operand(op1_reg), make_register_operand(op2_reg), "$c = $a != $b", 1));
 			break;
 		default:
@@ -221,11 +225,11 @@ void cg_operation(int operation, value *op1, value *op2, value *result, environm
 }
 
 /* Code generate PUSHING a parameter */
-void cg_push_param(value *operand, environment *current_env, int frame_size) {
+void cg_push_param(value *operand, environment *current_env) {
 	int reg_id = already_in_reg(regs, operand, current_env, &has_used_fn_variable);
 	if (reg_id == REG_VALUE_NOT_AVAILABLE) {
 		reg_id = $a0;
-		cg_store_in_reg($a0, operand, current_env, frame_size);
+		cg_store_in_reg($a0, operand, current_env);
 	}
 	append_mips(mips("sub", OT_REGISTER, OT_REGISTER, OT_CONSTANT, make_register_operand($sp), make_register_operand($sp), make_constant_operand(4), "Move stack pointer", 1));	
 	append_mips(mips("sw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(reg_id), make_offset_operand($sp, 0), NULL, "Write param into stack", 1));
@@ -240,21 +244,21 @@ void cg_pop_param(value *operand) {
 }
 
 /* Code generate an assignment */
-void cg_assign(value *result, value *operand1, environment *current_env, int frame_size) {
-	int result_reg = get_register(result, current_env, frame_size, 1);
-	cg_store_in_reg(result_reg, operand1, current_env, frame_size);
+void cg_assign(value *result, value *operand1, environment *current_env) {
+	int result_reg = get_register(result, current_env, 1);
+	cg_store_in_reg(result_reg, operand1, current_env);
 	regs[result_reg]->modified = 1;
 }
 
 /* Code generate an IF statement */
-void cg_if(value *condition, value *true_label, environment *current_env, int frame_size) {
-	int condition_register = get_register(condition, current_env, frame_size, 1);
+void cg_if(value *condition, value *true_label, environment *current_env) {
+	int condition_register = get_register(condition, current_env, 1);
 	append_mips(mips("bne", OT_REGISTER, OT_REGISTER, OT_LABEL, make_register_operand(condition_register), make_register_operand($zero), make_label_operand(correct_string_rep(true_label)), "", 1));
 }
 
 /* Code generate a fn call */
-void cg_fn_call(value *result, value *fn_def, environment *current_env, int frame_size) {
-	int result_reg = get_register(result, current_env, frame_size, 0);
+void cg_fn_call(value *result, value *fn_def, environment *current_env) {
+	int result_reg = get_register(result, current_env, 0);
 	regs[result_reg]->contents = result;	
 	regs[result_reg]->modified = 1;	
 	/* Pass dynamic link in $a1 */
@@ -284,6 +288,8 @@ void cg_load_static_link(value *caller, value *callee) {
 		}
 	}
 }
+
+/* ==== TAC OPTIMISATION ==== */
 
 /* Number TAC nesting levels */
 void number_tac_levels(tac_quad *top) {
@@ -348,12 +354,15 @@ tac_quad *linked_sort(tac_quad *input) {
 	return input;
 }
 
+/* ==== MAIN RECURSIVE LOOP ==== */
+
 
 /* Main recursive code generation function */
 void write_code(tac_quad *quad) {
 	int depth_difference = 0;
 	int size = 0;
 	int temporary;
+	int frame_size;
 	if (quad==NULL) return;
 	switch(quad->type) {
 		case TT_FN_DEF:
@@ -390,18 +399,18 @@ void write_code(tac_quad *quad) {
 			append_mips(mips("", OT_LABEL, OT_UNSET, OT_UNSET, make_label_operand(correct_string_rep(quad->operand1)), NULL, NULL, "", 0));
 			break;
 		case TT_ASSIGN:
-			cg_assign(quad->result, quad->operand1, current_fn->stored_in_env, frame_size);
+			cg_assign(quad->result, quad->operand1, current_fn->stored_in_env);
 			break;
 		case TT_PUSH_PARAM:
-			cg_push_param(quad->operand1, current_fn->stored_in_env, frame_size);
+			cg_push_param(quad->operand1, current_fn->stored_in_env);
 			break;
 		case TT_PREPARE:
 			break;
 		case TT_IF:
-			cg_if(quad->operand1, quad->result, current_fn->stored_in_env, frame_size);
+			cg_if(quad->operand1, quad->result, current_fn->stored_in_env);
 			break;
 		case TT_OP:
-			cg_operation(quad->subtype, quad->operand1, quad->operand2, quad->result, current_fn->stored_in_env, frame_size);
+			cg_operation(quad->subtype, quad->operand1, quad->operand2, quad->result, current_fn->stored_in_env);
 			break;
 		case TT_FN_CALL:
 			/* Wire out live registers into memory, in-case they're overwritten */
@@ -410,8 +419,8 @@ void write_code(tac_quad *quad) {
 			if (!quad->operand1->data.func || !quad->operand1->data.func->node_value) {
 				/* Dealing with fn variable - we can deduce its entry point & static link from */
 				/* runtime stored information */
-				int fn_variable = get_register(quad->operand1, current_fn->stored_in_env, frame_size, 1);
-				int result_reg = get_register(quad->result, current_fn->stored_in_env, frame_size, 0);
+				int fn_variable = get_register(quad->operand1, current_fn->stored_in_env, 1);
+				int result_reg = get_register(quad->result, current_fn->stored_in_env, 0);
 				int address_reg = choose_best_reg(regs, current_fn->stored_in_env);
 				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand(address_reg), make_offset_operand(fn_variable, 0), NULL, "Get Fn address", 1));
 				append_mips(mips("lw", OT_REGISTER, OT_OFFSET, OT_UNSET, make_register_operand($v0), make_offset_operand(fn_variable, 4), NULL, "Get static link", 1));
@@ -425,7 +434,7 @@ void write_code(tac_quad *quad) {
 			else {
 				/* Work out what static link to pass */
 				cg_load_static_link(current_fn, quad->operand1);
-				cg_fn_call(quad->result, quad->operand1, current_fn->stored_in_env, frame_size);		
+				cg_fn_call(quad->result, quad->operand1, current_fn->stored_in_env);		
 			}
 			break;
 		case TT_END_FN:
@@ -455,7 +464,7 @@ void write_code(tac_quad *quad) {
 					has_used_fn_variable = 1;
 				}
 				else {
-					cg_store_in_reg($v0, quad->operand1, current_fn->stored_in_env, frame_size);
+					cg_store_in_reg($v0, quad->operand1, current_fn->stored_in_env);
 				}
 			}
 			/* Save regs */
@@ -477,11 +486,7 @@ void write_code(tac_quad *quad) {
 	write_code(quad->next);
 }
 
-/* Reset global variables to their defaults before running write_code each time */
-void reset_globals() {
-	frame_size = 0;
-	current_fn = NULL;
-}
+/* ==== START POINT FOR TRANSLATION ==== */
 
 /* Generate MIPS code for given tree */
 void code_gen(NODE *tree) {
@@ -499,11 +504,8 @@ void code_gen(NODE *tree) {
 	quad = linked_sort(quad);
 	/* Write code header */
 	write_preamble();
-	reset_globals();
+	current_fn = NULL;
 	write_code(quad);
-	reset_globals();
-	/* Write out inner fns separately */
-	write_code(pending_code);
 	write_activation_record_fn();
 	if (has_used_fn_variable) write_register_fn_variable();
 	write_epilogue();	

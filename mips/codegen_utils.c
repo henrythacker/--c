@@ -1,5 +1,12 @@
 #include "codegen_utils.h"
 
+/**
+*	codegen_utils.c by Henry Thacker
+*
+*	Utilised used by the MIPS code generator
+*
+*/
+
 /* Print out the operand value */
 void print_mips_operand(mips_instruction *instruction, int operand) {
 	int type;
