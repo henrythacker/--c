@@ -60,7 +60,7 @@ value *string_value(char *val) {
 	tmp_value->identifier = malloc(sizeof(char) * 15);
 	sprintf(tmp_value->identifier, "_str%d", t_count);
 	tmp_value->value_type = VT_STRING;
-	tmp_value->data.string_value = (char *) malloc((sizeof(char) * strlen(val)) + 1);
+	tmp_value->data.string_value = (char *) malloc(sizeof(char) * (strlen(val) + 1));
 	strcpy(tmp_value->data.string_value, val);
 	t_count++;
 	return tmp_value;
