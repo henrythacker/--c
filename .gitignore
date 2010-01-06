@@ -2,3 +2,13 @@ mycc
 *.o
 bungee.rb
 examples
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.gz
+*.pdf
+*.toc
+!*-include.pdf
+!*-final.pdf
