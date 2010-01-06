@@ -1,0 +1,46 @@
+\chapter{Access to source and binaries}
+
+\section{Directory}
+/u/s/ht221/cm30171 (correct UNIX permissions have been set to allow read / execute access).
+
+\section{Host details}
+Host tested on: limol.bath.ac.uk (part of the LCPU cluster)
+
+\section{Folder Structure}
+There are three subfolders in the main source directory, as follows:
+\ \\
+\begin{description}
+	\item[debug] A copy of the source code and binaries, with debug information and more verbose output for both MIPS and during interpretation
+	\item[release] A copy of the source code and binaries, with all debugging information stripped and the minimum verbosity output
+	\item[tests] A series of tests are available within the examples subdirectory. This ``examples" folder is symlinked as examples from both the debug and release folders as a convenient way to execute test cases. The directory also contains a test harness that I developed, although unfortunately the LCPU machines do not have the correct ruby gems installed to see this in action.
+\end{description}
+
+\section{Instructions}
+The interpreter, tac-generator and compiler are all encompassed within the \verb!mycc! binary. Invoking \verb!mycc! without any parameters shows the usage switches, which are shown in listing \ref{lst:mycc-switchesex}. \textbf{Please note:} some examples will not work in MIPS due to some shortcomings that I will mention later on. Such examples may induce undefined behaviour / results.
+\ \\ \ \\
+So, to interpret the \verb1fibonacci.c1 example, one could run:
+
+\begin{lstlisting}[showstringspaces=false,language=java,breaklines=true, backgroundcolor=\color{light-gray}, captionpos=b, label={lst:mycc-fibex}]
+	./mycc -i < examples/fibonacci.c
+\end{lstlisting}
+
+\ \\Or to generate the three address code representation of \verb1twice.c1:
+\begin{lstlisting}[showstringspaces=false,language=java,breaklines=true, backgroundcolor=\color{light-gray}, captionpos=b, label={lst:mycc-twiceex}]
+	./mycc -t < examples/twice.c
+\end{lstlisting}
+
+\begin{lstlisting}[showstringspaces=false,language=java,breaklines=true,caption={mycc options}, backgroundcolor=\color{light-gray}, captionpos=b, label={lst:mycc-switchesex}]
+henry-thackers-macbook-pro:Compilers henry$ ./mycc
+--C Compiler - Input syntax
+
+./mycc [-p|-i|-t|-m] < input_source
+
+-p = parse mode - print out the parse tree and terminate
+-i = interpret - interpret the parse tree and print the result
+-t = TAC generator - print out TAC representation of the programme
+-m = MIPS generator - generate MIPS machine code
+\end{lstlisting}
+
+\section{Source control}
+The source code can be looked at in a far more convenient manner, with syntax highlighting, etc on GitHub at: \url{http://github.com/henrythacker/--c}.
+
