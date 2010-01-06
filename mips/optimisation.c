@@ -68,9 +68,45 @@ mips_instruction *remove_redundant_move(mips_instruction *input) {
 	return input;
 }
 
+/* Due to the way the code generation happens, often one can find the pattern add $sp, $sp, 4 followed directly by sub $sp, $sp, 4 */
+/* Remove both lines, the effect of both operations in tandem cancel each other out */
+/* Rationale: remove redundant code */
+mips_instruction *remove_redundant_sp_move(mips_instruction *input) {
+	mips_instruction *c_ins, *p_ins, *n_ins;	
+	p_ins = NULL;
+	c_ins = input;
+	n_ins = c_ins->next;
+	while (c_ins) {
+		if (c_ins && p_ins && n_ins) {
+			int condition1, condition2;
+			condition1 = strcmp(c_ins->operation, "add")==0 && c_ins->operand1 && c_ins->operand1_type == OT_REGISTER && c_ins->operand1->reg == $sp
+							&& c_ins->operand2 && c_ins->operand2_type == OT_REGISTER && c_ins->operand1->reg == $sp && c_ins->operand3
+							&& c_ins->operand3_type == OT_CONSTANT && c_ins->operand3->constant == 4;
+			condition2 = strcmp(n_ins->operation, "sub")==0 && n_ins->operand1 && n_ins->operand1_type == OT_REGISTER && n_ins->operand1->reg == $sp
+							&& n_ins->operand2 && n_ins->operand2_type == OT_REGISTER && n_ins->operand1->reg == $sp && n_ins->operand3
+							&& n_ins->operand3_type == OT_CONSTANT && n_ins->operand3->constant == 4;
+			if (condition1 && condition2) {
+				/* Target couple of instructions found */
+				/* Circumvent the current instructions */
+				free(c_ins);
+				p_ins->next = n_ins->next;
+				free(n_ins);
+				p_ins = p_ins->next;
+				c_ins = p_ins->next;
+				continue;
+			}
+		}
+		p_ins = c_ins;
+		c_ins = c_ins->next;
+		if (c_ins) n_ins = c_ins->next;
+	}
+	return input;	
+}
+
 /* Perform optimisation functions */
 mips_instruction *do_optimise(mips_instruction *input) {
 	input = remove_after_return(input);
 	input = remove_redundant_move(input);
+	input = remove_redundant_sp_move(input);
 	return input;
 }
