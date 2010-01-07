@@ -69,14 +69,14 @@ Within the limited time that we had for the whole project and the testing comple
 \begin{figure}[p]
 	\begin{verbatim}
 		typedef struct tac_quad {
-			char *op; /* Operation, i.e. + for addition */
-			value *operand1; /* A ptr to the first operand, could be an integer A */
-			value *operand2  /* A ptr to the first operand, could be an integer B */
-			value *result; /* The ptr to where the result will be stored, C */
-			int type; /* TT_OP - The type is an (arithmetic) operation */
-			int subtype; /* Reserved for categorisation of more granular operations */
-			int level; /* Used for MIPS code generation */
-			struct tac_quad *next; /* Pointer to the next tac_quad */		
+		    char *op; /* Operation, i.e. + for addition */
+		    value *operand1; /* A ptr to the first operand, could be an integer A */
+		    value *operand2  /* A ptr to the first operand, could be an integer B */
+		    value *result; /* The ptr to where the result will be stored, C */
+		    int type; /* TT_OP - The type is an (arithmetic) operation */
+		    int subtype; /* Reserved for categorisation of more granular operations */
+		    int level; /* Used for MIPS code generation */
+		    struct tac_quad *next; /* Pointer to the next tac_quad */		
 		}tac_quad;
 	\end{verbatim}
 	\caption{tac\_quad structure}
