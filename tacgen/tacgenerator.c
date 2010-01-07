@@ -57,13 +57,13 @@ void print_tac(tac_quad *quad) {
 			printf("PushParam %s\n", correct_string_rep(quad->operand1));
 			break;
 		case TT_IF:
-			printf("if %s goto %s\n", correct_string_rep(quad->operand1), correct_string_rep(quad->result));
+			printf("If %s Goto %s\n", correct_string_rep(quad->operand1), correct_string_rep(quad->result));
 			break;			
 		case TT_ASSIGN:
 			printf("%s %s %s\n", correct_string_rep(quad->result), quad->op, correct_string_rep(quad->operand1));
 			break;
 		case TT_GOTO:
-			printf("goto %s\n", correct_string_rep(quad->operand1));
+			printf("Goto %s\n", correct_string_rep(quad->operand1));
 			break;
 		case TT_OP:
 			printf("%s = %s %s %s\n", correct_string_rep(quad->result), correct_string_rep(quad->operand1), quad->op, correct_string_rep(quad->operand2));
