@@ -93,8 +93,19 @@ The TAC is generated in a very similar way to how the interpreter works, using a
 \ \\ \ \\
 As with the interpreter, a pre-scan is done to find all function and variable names (in global scope) and everything is entered into the global environment. We still have to pre-scan, because when we look up variable and function names, we must be able to point our \verb!tac_quad!s to the correct references for them from an environment. No notion of an entry-point is required during TAC generation, because the AST is traversed in its entirety from top to bottom, generating \verb!tac_quad!s on the fly.
 
+\subsection{Temporaries} \label{sec:temporaries}
+In Three Address Code, we are limited to a \textbf{maximum} of three addresses. Obviously, we cannot expect to complete any given operation in such a limited space, i.e. : $a = 1 + 3 + 2 + 10$ (4 operations, 5 addresses). In lectures, we were introduced to the concept of temporaries. We can assume that we have an infinite number of temporaries, but they must only appear on the LHS of an expression once. This allows us to split up complex expressions into ``\textbf{simple}" subexpressions stored in temporaries, that can be combined. This ``making simple" procedure is important in the implementation. Thus, our previous example becomes written as a series of simple instructions, seen in listing \ref{lst:temporaries}.
+\ \\
+\begin{lstlisting}[showstringspaces=false,language=java,breaklines=true, backgroundcolor=\color{light-gray}, captionpos=b, label={lst:temporaries}, caption={Using Temporaries}]
+	_t1 = 1 + 3
+	_t2 = 2 + 10
+	a = _t1 + _t2
+\end{lstlisting}
+\ \\ \ \\
+In the TAC Generator implementation, temporaries are embraced as full members of the environment. Temporaries are not treated any differently from variables and are accessed using the same functions. 
+
 \subsection{Building tac\_quads}
-After we have completed the pre-scan to populate our global environment, a full scan is made starting from the top of the AST. The TAC instructions are formed by examining each \verb!NODE! and evaluating the LHS and RHS until we have enough information to form a single, complete TAC instruction. The steps that are taken for a few different \verb!NODE! types are given below.
+After we have completed the pre-scan to populate our global environment, a full scan is made starting from the top of the AST. The TAC instructions are formed by examining each \verb!NODE! and evaluating the LHS and RHS until we have enough information to form a single, complete TAC instruction. The concept of ``make simple" was introduced in section \ref{sec:temporaries} and it refers to the process of reducing complex expressions to a temporary (i.e. the simplest form possible). Our recursive function in the TAC generator is actually called \verb!make_simple! and at each stage, it tries to reduce a subexpression to the simplest form it can (often a temporary). The steps that are taken for a few different \verb!NODE! types are given below.
 
 \begin{description}
 	\item[Arithmetic Operator]
@@ -110,6 +121,10 @@ After we have completed the pre-scan to populate our global environment, a full 
 		\end{description}
 	\item[RETURN]
 \end{description}
+
+\subsection{List of tac_quads}
+\subsection{Machine Independent Optimisation}
+\subsection{State of the TAC Generator}
 
 \section{MIPS Assembler Compiler}
 \label{section:MIPS}
