@@ -1,0 +1,10 @@
+\chapter{Three-address code}
+\section{Introduction}
+\label{sec:tacintro}
+Throughout the design of the three address code, it was important to keep the purpose of intermediate representations in mind:
+
+\begin{quotation}
+	\ \\The \emph{intermediate code generation module} translates language-specific constructs in the AST into more general constructs \ldots One criterion for the level of the intermediate code is that it should be reasonably straightforward to generate machine code from it for various machines \ldots \cite{grune2000}.
+\end{quotation}
+
+The TAC \emph{(Three Address Code)} that was developed for this project removes \verb!WHILE! statements, replacing them with jumps and conditions. Nested functions, however, are retained in nested form because this is a simple way of seeing the static link. It would be difficult to convey how functions are nested via other means. The rationale behind the TAC design is covered in the next major section of this project.

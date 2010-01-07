@@ -66,13 +66,23 @@ Within the limited time that we had for the whole project and the testing comple
 	\label{fig:if}
 \end{figure}
 
+\begin{figure}[p]
+	\begin{verbatim}
+		Blah
+	\end{verbatim}
+	\caption{tac\_quad structure}
+	\label{fig:tacquad}
+\end{figure}
+
 \section{Intermediate Representation}
 
 \subsection{Introduction}
-In the coursework specification we were asked to develop a three address code representation of our own design. Throughout the design of the three address code, it was important to keep the purpose of intermediate representations in mind:
-\begin{quotation}
-\ \\The \emph{intermediate code generation module} translates language-specific constructs in the AST into more general constructs \ldots One criterion for the level of the intermediate code is that it should be reasonably straightforward to generate machine code from it for various machines \ldots \cite{grune2000}.
-\end{quotation}
+In the coursework specification we were asked to develop a three address code representation of our own design. The input to the Three Address Code generator is the AST (\emph{Abstract Syntax tree}). The coursework specification indicates that it should be possible to read TAC (\emph{Three Address Code}) from a flat file. This was not implemented due to time pressures and it was felt that it was more important to look at code generation, rather than write a TAC parser. The next section \ref{sec:tacintro} presents further background information behind the rationale of using a form of intermediate representation and the associated design choices that were made.
+
+\subsection{Recursive TAC Generation}
+The TAC is generated in a very similar way to how the interpreter works, using a big recursive function which handles all the different types of \verb!NODE!. Instead of evaluating the result of operations, we are interested in building TAC ``quadruples", internally referred to as a \verb!tac_quad!. Each \verb!tac_quad! is one TAC instruction and contains a \textbf{maximum} of three addresses and several other pieces of metadata (please see figure \ref{fig:tacquad}). A \verb!tac_quad! does not contain text, each address points to a \verb!value! within our environment. Thus, we are able to perform type checking and environment traversal, just as the interpreter does.
+\ \\ \ \\
+As with the interpreter, a pre-scan is done to find all function names and variable names (in global scope) and everything is entered into the global environment. We still have to pre-scan, because when we look up variable and function names, we must be able to point our \verb!tac_quad!s to the correct references for them from an environment.
 
 \section{MIPS Assembler Compiler}
 \label{section:MIPS}
