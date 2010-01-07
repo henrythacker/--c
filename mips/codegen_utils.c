@@ -77,7 +77,7 @@ void print_mips(mips_instruction *instructions) {
 		print_mips_operand(instructions, 2);	
 		print_mips_operand(instructions, 3);		
 	}
-	if (DEBUG_ON && instructions->comment && strlen(instructions->comment) > 0) {
+	if (instructions->operand1_type == OT_COMMENT || (DEBUG_ON && instructions->comment && strlen(instructions->comment) > 0)) {
 		printf("\t# %s\n", instructions->comment);
 	}
 	else {
