@@ -108,7 +108,7 @@ In the TAC Generator implementation, temporaries are embraced as full members of
 After we have completed the pre-scan to populate our global environment, a full scan is made starting from the top of the AST. The TAC instructions are formed by examining each \verb!NODE! and evaluating the LHS and RHS until we have enough information to form a single, complete TAC instruction. The concept of ``make simple" was introduced in section \ref{sec:temporaries} and it refers to the process of reducing complex expressions to a temporary (i.e. the simplest form possible). Our recursive function in the TAC generator is actually called \verb!make_simple! and at each stage, it tries to reduce a subexpression to the simplest form it can (often a temporary). The steps that are taken for a few different \verb!NODE! types are given below.
 
 \begin{description}
-	\item[Arithmetic Operator]
+	\item[Arithmetic Operator] An integer temporary is created in preparation to hold to results of the arithmetic expression. The LHS and RHS of the operator are passed recursively to \verb!make_simple! to coerce them into integers. If the LHS or RHS are not simple integers or variables, they may themselves be made into integer temporaries. A call is made to \verb!make_quad_value! to build a \verb!tac_quad! of type \verb!TT_OP! (TAC type operation). Operands 1 and 2 are set to reference the LHS and RHS \verb!value!s that were returned by the calls to \verb!make_simple!. The result member of \verb!tac_quad! is set to reference the temporary that we created earlier to hold the result. The resultant \verb!tac_quad! is written into the linked list of TAC statements generated so far.
 	\item[= Operator]
 	\item[APPLY]
 	\item[WHILE]
