@@ -17,10 +17,10 @@ The environment (depicted in figure \ref{fig:environment}) is a hash-table of \v
 	\item[VT\_FUNCTN] These values represent pointers to functions. This can be either a function variable or an actual function.
 \end{description}
 
-\subsection{Invoking the entry point}
+\subsection{Invoking the Entry Point}
 If no entry point is found, a fatal error is raised as interpretation cannot continue without a valid entry point. If the entry point was found in our global environment, we lookup where the function definition was found in the AST and execute from this point. The \verb!environment.c! file gives us lots of useful search functionality in order to do things such as this. The particular search we do to find the main entry point is to look for a function in the global environment called \verb!main! with an integer return type and no formal parameters. If we get a match, we are returned a \verb!value! structure (of type \verb!VT_FUNCTN!) which meets our requirements within the global environment. These ``function values" each hold a reference to what \verb!NODE! in the AST is considered the ``start of the function". Once we have found the corresponding ``start of function" \verb!NODE! for the \verb!main()! function, we are able to continue the interpretation process by calling \verb!evaluate! on this entry \verb!NODE!.
 
-\subsection{Main recursive function - evaluate()}
+\subsection{Recursive function - evaluate()}
 The \verb!evaluate! function is now called recursively starting from the entry point. This scan is different from the initial scan, because we now look inside function bodies and any nested functions contained therein. Every time we enter a new function or block (such as an \emph{if statement} or \emph{while loop}), a new environment is created with a static link to the environment of the parent (enclosing) function (or the global environment, as appropriate). As we step over the tree in this recursive function, we encounter \verb!NODES! that are present in the AST. The following list mentions the steps that are taken for the several different (more interesting) types of node. The terms LHS and RHS refer to the \emph{left-hand side} and \emph{right-hand side} of an expression respectively. As the AST is a binary tree, the LHS and RHS can be thought of as the two child nodes under the current node. Please see figure \ref{fig:ast} for an example AST, that will use some of the elements mentioned below.
 
 \begin{description}
@@ -41,10 +41,10 @@ The \verb!evaluate! function is now called recursively starting from the entry p
 \subsection{Returning from main()}
 After traversing the AST, the \verb!main! function should have a valid integer return value (unless no \verb!RETURN! statement was present). This value is simply printed to standard out and the interpreter finishes.
 
-\subsection{State of the interpreter}
+\subsection{State of the Interpreter}
 Within the limited time that we had for the whole project and the testing completed as part of this, the interpreter is seemingly complete. It is capable of executing all of the example scripts that I have created and there are no significant faults that I know of. There are two known faults that can be mentioned briefly.
 \begin{itemize}
-	\item One thing that does not work in the interpreter, but parses are functions without parameters that use the keyword \verb!void! to denote no parameters: \verb!int my_parameterless_fn(void)!.
+	\item One thing that does not work in the interpreter, but parses correctly: Functions without parameters that use the keyword \verb!void! to denote no parameters: \verb!int my_parameterless_fn(void)!.
 	\item Return values are type-checked, but no effort is made to detect functions that do not return a value, when they should.
 \end{itemize}
 
@@ -86,15 +86,30 @@ Within the limited time that we had for the whole project and the testing comple
 \section{Intermediate Representation}
 
 \subsection{Introduction}
-In the coursework specification we were asked to develop a three address code representation of our own design. The input to the Three Address Code generator is the AST (\emph{Abstract Syntax tree}). The coursework specification indicates that it should be possible to read TAC (\emph{Three Address Code}) from a flat file. This was not implemented due to time pressures and it was felt that it was more important to look at code generation, rather than write a TAC parser. The next section \ref{sec:tacintro} presents further background information behind the rationale of using a form of intermediate representation and the associated design choices that were made.
+In the coursework specification we were asked to develop a three address code representation of our own design. The input to the Three Address Code generator is the AST (\emph{Abstract Syntax tree}). The coursework specification indicates that it should be possible to read TAC (\emph{Three Address Code}) from a flat file. This was not implemented due to time pressures and it was felt that it was more important to move onto code generation, rather than write a TAC parser. The next section \ref{sec:tacintro} presents further background information behind the rationale of using a form of intermediate representation and the associated design choices that were made.
 
 \subsection{Relation to the Interpreter}
-The TAC is generated in a very similar way to how the interpreter works, using a big recursive function which handles all the different types of \verb!NODE!. Instead of evaluating the result of operations, we are interested in building TAC ``quadruples", internally referred to as a \verb!tac_quad!. Each \verb!tac_quad! is one TAC instruction and contains a \textbf{maximum} of three addresses (operand1, operand2, result) and several other pieces of metadata (please see figure \ref{fig:tacquad}). A \verb!tac_quad! does not contain text or lexemes, each address points to a \verb!value! within our environment. Thus, we are able to perform type checking and environment traversal, just as the interpreter does. The TAC generator generates a linked list of these \verb!tac_quad!s that represent the user-supplied \mmc source.
+The TAC is generated in a very similar way to how the interpreter works, using a large recursive function which handles all the different types of \verb!NODE!. Instead of evaluating the result of operations, we are interested in building TAC ``quadruples", internally referred to as a \verb!tac_quad!. Each \verb!tac_quad! is one TAC instruction and contains a \textbf{maximum} of three addresses (operand1, operand2, result) and several other pieces of metadata (please see figure \ref{fig:tacquad}). A \verb!tac_quad! does not contain text or lexemes, each address points to a \verb!value! within our environment. Thus, we are able to perform type checking and environment traversal, just as the interpreter does. The TAC generator generates a linked list of these \verb!tac_quad!s that represent the user-supplied \mmc source.
 \ \\ \ \\
 As with the interpreter, a pre-scan is done to find all function and variable names (in global scope) and everything is entered into the global environment. We still have to pre-scan, because when we look up variable and function names, we must be able to point our \verb!tac_quad!s to the correct references for them from an environment. No notion of an entry-point is required during TAC generation, because the AST is traversed in its entirety from top to bottom, generating \verb!tac_quad!s on the fly.
 
+\subsection{Building tac\_quads}
+After we have completed the pre-scan to populate our global environment, a full scan is made starting from the top of the AST. The TAC instructions are formed by examining each \verb!NODE! and evaluating the LHS and RHS until we have enough information to form a single, complete TAC instruction. The steps that are taken for a few different \verb!NODE! types are given below.
 
-
+\begin{description}
+	\item[Arithmetic Operator]
+	\item[= Operator]
+	\item[APPLY]
+	\item[WHILE]
+	\item[IF and ELSE]
+	\item[Functions]
+		\begin{description}
+			\item[D]
+			\item[d]
+			\item[F]
+		\end{description}
+	\item[RETURN]
+\end{description}
 
 \section{MIPS Assembler Compiler}
 \label{section:MIPS}
