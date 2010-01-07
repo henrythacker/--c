@@ -109,8 +109,8 @@ After we have completed the pre-scan to populate our global environment, a full 
 
 \begin{description}
 	\item[Arithmetic Operator] An integer temporary is created in preparation to hold to results of the arithmetic expression. The LHS and RHS of the operator are passed recursively to \verb!make_simple! to coerce them into integers. If the LHS or RHS are not simple integers or variables, they may themselves be made into integer temporaries. A call is made to \verb!make_quad_value! to build a \verb!tac_quad! of type \verb!TT_OP! (TAC type operation). Operands 1 and 2 are set to reference the LHS and RHS \verb!value!s that were returned by the calls to \verb!make_simple!. The result member of \verb!tac_quad! is set to reference the temporary that we created earlier to hold the result. The resultant \verb!tac_quad! is written into the linked list of TAC statements generated so far.
-	\item[= Operator] Both the LHS (assignment variable) and RHS (assignment value) are passed to \verb!make_simple!. The current environment is searched to ensure that the assignment variable has already been defined, if not, an error is raised. During simplification, the RHS will be reduced to a simple constant, variable or temporary. The simplified value can then be type checked against the declaration for the assignment variable, to ensure that the assignment is valid. If so, the assignment is made in the environment.
-	\item[APPLY]
+	\item[= Operator] Both the LHS (assignment variable) and RHS (assignment value) are passed to \verb!make_simple!. The current environment is searched to ensure that the assignment variable has already been defined, if not, an error is raised. During simplification, the RHS will be reduced to a simple constant, variable or temporary. The simplified value can then be type checked against the declaration for the assignment variable, to ensure that the assignment is valid. If so, the assignment is made in the environment. A \verb!tac_quad! is generated of type \verb!TT_ASSIGN!, an operation of ``$=$", operand 1 is set to reference the assignment value and result is set to reference the assignment variable.
+	\item[APPLY] 
 	\item[WHILE]
 	\item[IF and ELSE]
 	\item[Functions]
@@ -122,7 +122,7 @@ After we have completed the pre-scan to populate our global environment, a full 
 	\item[RETURN]
 \end{description}
 
-\subsection{List of tac\_quads}
+\subsection{Output of tac\_quads}
 \subsection{Machine Independent Optimisation}
 \subsection{State of the TAC Generator}
 
