@@ -6,5 +6,17 @@ Throughout the design of the three address code, it was important to keep the pu
 \begin{quotation}
 	\ \\The \emph{intermediate code generation module} translates language-specific constructs in the AST into more general constructs \ldots One criterion for the level of the intermediate code is that it should be reasonably straightforward to generate machine code from it for various machines \ldots \cite{grune2000}.
 \end{quotation}
-
-The TAC \emph{(Three Address Code)} that was developed for this project removes \verb!WHILE! statements, replacing them with jumps and conditions. Nested functions, however, are retained in nested form because this is a simple way of seeing the static link. It would be difficult to convey how functions are nested via other means. The rationale behind the TAC design is covered in the next major section of this project.
+\ \\
+In order to genericise the instructions as much as possible, the instruction set provides no special instructions for \verb!WHILE! loops, inner functions or variable type specific operations. The instruction set is as follows, the syntax of the statements will be discussed briefly afterwards.
+\ \\ \ \\
+\begin{tabular}{|p{5.5cm}|p{3.5cm}|p{7cm}|}
+	\hline
+	\textbf{Instruction} & \textbf{TAC Type} & \textbf{Description} \\ \hline
+	\verb!Label:! & TT\_LABEL & Labels can be made up of any alphanumeric characters. The AST $\rightarrow$ TAC translation utilises double underscore to denote jumps within \verb!IF! statements, e.g. \verb!__if1end! \\ \hline
+	\verb!_FunctionLabel:! & TT\_FN\_DEF & Function labels are prefixed with a single underscore \\ \hline
+	\verb![result = ] CallFn <FnName>! & TT\_FN\_CALL & \verb!<FnName>! is the function that should be invoked. The \verb![result = ]! portion is optional if no return value is expected \\ \hline
+	\verb!InitFrame <FrameSize>! & TT\_INIT\_FRAME & \verb!<FrameSize>! is the \textbf{number} of locals in the local environment of this function \\ \hline
+	\verb!PopParam <Var>! & TT\_POP\_PARAM & Each formal parameter must be popped as part of the function definition \\ \hline
+	\verb!PushParam <Value>! & TT\_PUSH\_PARAM & Each actual parameter must be pushed as part of a function call. Parameters must be pushed in \textbf{reverse} order. If a function has parameters \verb!int a, int b!, the caller must push the value for \verb!b! before the value for parameter \verb!a!\\ \hline
+	\verb!If <Cond.> Goto <TrueJmp>! & TT\_IF & \verb!<Cond.>! is the branch condition, this should be an integer, temporary or variable. \verb!<TrueJmp>! is a label that will be jumped to when \verb!<Cond.>! is true\\ \hline
+\end{tabular}
