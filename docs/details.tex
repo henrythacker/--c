@@ -224,13 +224,14 @@ Three functions mentioned above are: \verb!to_string!, \verb!correct_string_rep!
 
 \subsection{Machine Independent Optimisation (MIO)}
 \label{sec:MIO}
+Intermediate representation is an ideal place to do various forms of optimisation. Once the translation into TAC is complete, it is easy to spot redundant instructions. Unfortunately no time was available to start implementing any form of optimisation of TAC instructions. Consideration to possible optimisation schemes will be given in the Further Improvements section. The TAC has been written with optimisation in mind and it would be fairly trivial to add at a later stage.
 
 \subsection{State of the TAC Generator}
 The TAC generator is perhaps a slightly smaller part of this project than was intended by the coursework specification. It \textbf{is} a module in its own right and can be run independently of the code generator. However, it requires input from the parser to function. Unfortunately there was no time to implement a separate TAC parser, although this will be discussed in the Critical Evaluation section in further detail.
 \\ \ \\ \
 Functionally, the TAC generator is not \emph{as} complete as the interpreter, but it is still able to execute almost all of the examples as intended. One area that is lacking is the creation of new environments within \verb!IF! and \verb!WHILE! statements. This means that the behaviour when redefining an existing variable has not been rigorously tested and is likely to break.
 \\ \ \\ \
-Additionally as mentioned in the section on Machine Independent Optimisation (section \ref{sec:MIO}), there was simply no time to investigate various optimisations that could have been put to use. This, again, is covered in further detail in the Critical Evaluation section.
+Additionally as mentioned in the section on Machine Independent Optimisation (section \ref{sec:MIO}), there was simply no time to investigate various optimisations that could have been put to use. This, again, is covered in further detail in the Further Improvements section.
 
 \newpage
 \section{MIPS Assembler Compiler}
