@@ -169,6 +169,8 @@ Up until now, the description of the recursive function \verb!make_simple! has m
 	\item[TT\_FN\_BODY] is written as: \\ \ \verb!FnBody!
 	\item[TT\_END\_FN] is written as: \\ \ \verb!EndFn!
 \end{description}
+\ \\
+Three functions mentioned above are: \verb!to_string!, \verb!correct_string_rep! and \verb!param_count!. The \verb!to_string! function takes any \verb!value! structure of type \verb!VT_STRING! and writes out the underlying string representation. \verb!correct_string_rep! is a more intelligent version of \verb!to_string! and can handle printing \verb!value!s of any given value type. If the value is an integer, \verb!correct_string_rep! will convert this to a string for us, it can print \verb!VT_STRING!s directly, temporary names are written out rather than their values, function pointers are also resolved to function names and returned as strings. The final function \verb!param_count! takes a look at a function definition (given a reference to one in an environment) and returns the size of the formal parameter list stored within the function definition.
 
 \begin{figure}[p]
 	\begin{verbatim}
