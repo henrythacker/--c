@@ -157,9 +157,9 @@ Up until now, the description of the recursive function \verb!make_simple! has m
 	\item[TT\_POP\_PARAM] is written as: \\ \ \verb!PopParam [quad->operand1->identifier]!, e.g: \verb!PopParam a!		
 	\item[TT\_PUSH\_PARAM] is written as: \\ \ \verb!PushParam [correct_string_rep(quad->operand1)]!, e.g: \verb!PushParam 5!
 	\item[TT\_IF] is written as: \\ \ \verb!If [correct_string_rep(quad->operand1)] Goto [correct_string_rep(quad->result)]!, e.g: \verb!If _t1 Goto __if1true!
-	\item[TT\_ASSIGN] is written as: \\ \ \verb![correct_string_rep(quad->result)] [correct_string_rep(quad->op)] [correct_string_rep(quad->operand1)]!, e.g: \verb!_t2 = 5!
+	\item[TT\_ASSIGN] is written as: \\ \ \verb![correct_string_rep(quad->result)] [correct_string_rep(quad->op)]! \\ \verb![correct_string_rep(quad->operand1)]!, e.g: \verb!_t2 = 5!
 	\item[TT\_GOTO] is written as: \\ \ \verb!Goto [correct_string_rep(quad->operand1)]!, e.g: \verb!Goto __if4end!
-	\item[TT\_OP] is written as: \\ \ \verb![correct_string_rep(quad->result)] = [correct_string_rep(quad->operand1)] [correct_string_rep(quad->op)] [correct_string_rep(quad->operand2)]!, e.g: \verb!_t4 = 5 + _t1!
+	\item[TT\_OP] is written as: \\ \ \verb![correct_string_rep(quad->result)]! \verb!=! \verb![correct_string_rep(quad->operand1)]! \\ \verb![correct_string_rep(quad->op)]! \verb![correct_string_rep(quad->operand2)]!,\\ e.g: \verb!_t4 = 5 + _t1!
 	\item[TT\_RETURN] is written as: \\ \ \verb!Return [correct_string_rep(quad->operand1)]!, e.g: \verb!Return _t5!
 		\begin{description}
 			\item[OR] \verb!Return!, if no return value is supplied
