@@ -7,7 +7,7 @@ Firstly, the interpreter scans the AST, looking for global variables and functio
 \ \\ \ \\
 Another benefit of performing this initial scan, is that as all outermost functions (and global variables) will now be entered into the environment. This means that functions may call other outer-level functions regardless of the order of definition (i.e if one function calls one which is declared lower down in the file). The same, however, does not apply to inner functions / variables.
 \subsection{Environment}
-Quite simply, the environment houses everything that the interpreter considers to be in local scope at a given execution point. As such, after our initial scan, we can detect the presence of a valid entry-point function by examining the environment. This initial environment is known as the ``global environment", as everything contained within, is visible to the whole user programme. This initial scan follows exactly the same code-path as the full interpreter does, but passes a flag, in order to ensure that function bodies are never stepped into.
+Quite simply, the environment houses everything that the interpreter considers to be in local scope at a given execution point. As such, after our initial scan, we can detect the presence of a valid entry-point function by examining the environment. This initial environment is known as the ``global environment", as everything contained within, is visible to the whole user program. This initial scan follows exactly the same code-path as the full interpreter does, but passes a flag, in order to ensure that function bodies are never stepped into.
 \ \\ \ \\
 The environment (depicted in figure \ref{fig:environment}) is a hash-table of \verb!values!. These values are references to inner functions or local variables. By following the static link between one environment and another (please see figure \ref{fig:environment}), it is possible to access and refer to values residing in outer scopes. The idea of a static link was given to us in relation to their use in Activation Records (please see section \ref{section:MIPS}) during lectures. Different information is stored for functions as opposed to variables. The \verb!value!'s type is determined with the following constants, the main types are given here, although there are some used for other purposes that are not mentioned here for the sake of clarity.
 
@@ -119,18 +119,28 @@ The node on the RHS is examined to see if it is an \verb!ELSE! statement. If it 
 \\ \ \\ \
 In both cases (with and without an \verb!ELSE!) the true portion of the \verb!IF! statement is now translated. We generate a \verb!TT_LABEL! denoting the start of the true section (as we discussed earlier: \verb!__ifXtrue!). The true branch is now passed to \verb!make_simple!. Finally, to complete the \verb!IF! statement, the aforementioned end label is appended.
 	\item[WHILE] While statements are rewritten as \verb!IF! statements, but with a jump back to the condition at the end of the true branch.
-	\item[Functions]
+	\item[Functions] Each function declaration generates a minimum of 6 TAC instructions, these are detailed in the relevant sections below.
 		\begin{description}
 			\item[D]
-			\item[d]
+			\item[d]  %*************************************** HERE HERE HERE ********************************************
 			\item[F]
 		\end{description}
 	\item[RETURN] For a return statement, if the LHS is not null, it is passed to \verb!make_simple!. If the LHS is an identifier, then this identifier is searched for in the environment. Identifiers may appear on the LHS if the function returns a function or integer-typed variable, for instance. A type check is performed on the return value to ensure it is consistent with the function definition. We now append a \verb!TT_RETURN! \verb!tac_quad! and set the operand1 member to the returned value (or null for a void function).
 \end{description}
 
 \subsection{Output of tac\_quads}
-\subsection{Machine Independent Optimisation}
-\subsection{State of the TAC Generator}
+By the time the \verb!make_simple! call returns, a linked list of complete \verb!tac_quad! structures has been created that constitutes the translation of the user \mcc program into TAC representation. As mentioned previously, these structures do not contain strings or lexemes, but use pointers in to an environment structure. %This was the suggested approach in [QUOTE DRAGON BOOK HERE]
+%ADDITIONALLY, another benefit was that a lot of the functionality, such as type checking and a working scope system could be inherited from the interpreter. (ENVIRONMENT)
 
+\subsection{Machine Independent Optimisation (MIO)}
+
+
+\label{sec:MIO}
+\subsection{State of the TAC Generator}
+The TAC generator is perhaps a slightly smaller part of this project than was intended by the coursework specification. It \textbf{is} a module in its own right and can be run independently of the code generator. However, it requires input from the parser to function. Unfortunately there was no time to implement a separate TAC parser, although this will be discussed in the Critical Evaluation section in further detail.
+\\ \ \\ \
+Functionally, the TAC generator is not \emph{as} complete as the interpreter, but it is still able to execute almost all of the examples as intended. One area that is lacking is the creation of new environments within \verb!IF! and \verb!WHILE! statements. This means that the behaviour when redefining an existing variable has not been rigorously tested and is likely to break.
+\\ \ \\ \
+Additionally as mentioned in the section on Machine Independent Optimisation (section \ref{sec:MIO}), there was simply no time to investigate various optimisations that could have been put to use. This, again, is covered in further detail in the Critical Evaluation section.
 \section{MIPS Assembler Compiler}
 \label{section:MIPS}
