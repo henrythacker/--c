@@ -119,7 +119,7 @@ The node on the RHS is examined to see if it is an \verb!ELSE! statement. If it 
 \\ \ \\ \
 In both cases (with and without an \verb!ELSE!) the true portion of the \verb!IF! statement is now translated. We generate a \verb!TT_LABEL! denoting the start of the true section (as we discussed earlier: \verb!__ifXtrue!). The true branch is now passed to \verb!make_simple!. Finally, to complete the \verb!IF! statement, the aforementioned end label is appended.
 	\item[WHILE] While statements are rewritten as \verb!IF! statements, but with a jump back to the condition at the end of the true branch.
-	\item[Functions] Each function declaration generates a minimum of 6 TAC instructions, these are detailed in the relevant sections below. It may help to look at figures \ref{fig:printedtac} and \ref{fig:ast} in addition to the textual description.
+	\item[Functions] Each function declaration generates a minimum of 5 TAC instructions, these are detailed in the relevant sections below. It may help to look at figures \ref{fig:printedtac} and \ref{fig:ast} in addition to the textual description.
 		\begin{description}
 			\item[D] The LHS is passed to \verb!make_simple!. This yields a basic \verb!VT_FUNCTN! value which, by this stage, contains much of the required information regarding the function's definition. This function definition is stored in the environment. Several TAC statements are now generated, the semantics of these statements should be referred to in the next section (section \ref{sec:tacintro}).
 \\ \ \\ \
