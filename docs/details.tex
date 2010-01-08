@@ -86,6 +86,7 @@ Within the limited time that we had for the whole project and the testing comple
 \subsection{Testing}
 To test the interpreter I wrote a small regression testing framework called \verb!bungee!\footnote{\url{http://github.com/henrythacker/bungee}}. After every change the script was fired off to ensure that all tests continue to yield the correct results. Unfortunately it will not run on the BUCS machines because certain Ruby dependencies are unavailable.
 
+\newpage
 \section{Intermediate Representation}
 
 \subsection{Introduction}
@@ -149,21 +150,24 @@ Up until now, the description of the recursive function \verb!make_simple! has m
 \ \\ \ \\
 \verb!print_tac! is another recursive function that walks over the list of generated \verb!tac_node!s and writes out the ``human readable" form of each quad. The rewrite rules for each TAC operation are given below.
 \begin{description}
-	\item[TT\_LABEL] is written as \verb![to_string(quad->operand1)]:!, e.g: \verb!__if1true:!
-	\item[TT\_FN\_DEF] is written as \verb!_[to_string(quad->operand1)]:!, e.g: \verb!_main:!
-	\item[TT\_LABEL] is written as \verb![quad->operand1]:!, e.g: \verb!__if1true:!
-	\item[TT\_LABEL] is written as \verb![quad->operand1]:!, e.g: \verb!__if1true:!
-	\item[TT\_LABEL] is written as \verb![quad->operand1]:!, e.g: \verb!__if1true:!		
-	\item[TT\_LABEL] is written as \verb![quad->operand1]:!, e.g: \verb!__if1true:!
-	\item[TT\_LABEL] is written as \verb![quad->operand1]:!, e.g: \verb!__if1true:!
-	\item[TT\_LABEL] is written as \verb![quad->operand1]:!, e.g: \verb!__if1true:!
-	\item[TT\_LABEL] is written as \verb![quad->operand1]:!, e.g: \verb!__if1true:!
-	\item[TT\_LABEL] is written as \verb![quad->operand1]:!, e.g: \verb!__if1true:!
-	\item[TT\_LABEL] is written as \verb![quad->operand1]:!, e.g: \verb!__if1true:!
-	\item[TT\_LABEL] is written as \verb![quad->operand1]:!, e.g: \verb!__if1true:!
-	\item[TT\_LABEL] is written as \verb![quad->operand1]:!, e.g: \verb!__if1true:!
-	\item[TT\_LABEL] is written as \verb![quad->operand1]:!, e.g: \verb!__if1true:!
-	\item[TT\_LABEL] is written as \verb![quad->operand1]:!, e.g: \verb!__if1true:!
+	\item[TT\_LABEL] is written as: \\ \ \verb![to_string(quad->operand1)]:!, e.g: \verb!__if1true:!
+	\item[TT\_FN\_DEF] is written as: \\ \ \verb!_[to_string(quad->operand1)]:!, e.g: \verb!_main:!
+	\item[TT\_FN\_CALL] is written as: \\ \ \verb![correct_string_rep(quad->result)] = CallFn _[correct_string_rep(quad->operand1)]:!, e.g: \verb!_t1 = CallFn _cplusa!
+	\item[TT\_INIT\_FRAME] is written as: \\ \ \verb!InitFrame [correct_string_rep(quad->operand1)]!, e.g: \verb!InitFrame 5!
+	\item[TT\_POP\_PARAM] is written as: \\ \ \verb!PopParam [quad->operand1->identifier]!, e.g: \verb!PopParam a!		
+	\item[TT\_PUSH\_PARAM] is written as: \\ \ \verb!PushParam [correct_string_rep(quad->operand1)]!, e.g: \verb!PushParam 5!
+	\item[TT\_IF] is written as: \\ \ \verb!If [correct_string_rep(quad->operand1)] Goto [correct_string_rep(quad->result)]!, e.g: \verb!If _t1 Goto __if1true!
+	\item[TT\_ASSIGN] is written as: \\ \ \verb![correct_string_rep(quad->result)] [correct_string_rep(quad->op)] [correct_string_rep(quad->operand1)]!, e.g: \verb!_t2 = 5!
+	\item[TT\_GOTO] is written as: \\ \ \verb!Goto [correct_string_rep(quad->operand1)]!, e.g: \verb!Goto __if4end!
+	\item[TT\_OP] is written as: \\ \ \verb![correct_string_rep(quad->result)] = [correct_string_rep(quad->operand1)] [correct_string_rep(quad->op)] [correct_string_rep(quad->operand2)]!, e.g: \verb!_t4 = 5 + _t1!
+	\item[TT\_RETURN] is written as: \\ \ \verb!Return [correct_string_rep(quad->operand1)]!, e.g: \verb!Return _t5!
+		\begin{description}
+			\item[OR] \verb!Return!, if no return value is supplied
+		\end{description}
+	\item[TT\_PREPARE] is written as: \\ \ \verb!PrepareToCall [param_count(quad->operand1)]!, e.g: \verb!PrepareToCall 5!
+	\item[TT\_BEGIN\_FN] is written as: \\ \ \verb!BeginFn [correct_string_rep(quad->operand1)]!, e.g: \verb!BeginFn main!
+	\item[TT\_FN\_BODY] is written as: \\ \ \verb!FnBody!
+	\item[TT\_END\_FN] is written as: \\ \ \verb!EndFn!
 \end{description}
 
 \begin{figure}[p]
@@ -225,5 +229,7 @@ The TAC generator is perhaps a slightly smaller part of this project than was in
 Functionally, the TAC generator is not \emph{as} complete as the interpreter, but it is still able to execute almost all of the examples as intended. One area that is lacking is the creation of new environments within \verb!IF! and \verb!WHILE! statements. This means that the behaviour when redefining an existing variable has not been rigorously tested and is likely to break.
 \\ \ \\ \
 Additionally as mentioned in the section on Machine Independent Optimisation (section \ref{sec:MIO}), there was simply no time to investigate various optimisations that could have been put to use. This, again, is covered in further detail in the Critical Evaluation section.
+
+\newpage
 \section{MIPS Assembler Compiler}
 \label{sec:MIPS}
