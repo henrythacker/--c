@@ -116,14 +116,14 @@ After we have completed the pre-scan to populate our global environment, a full 
 The node on the RHS is examined to see if it is an \verb!ELSE! statement. If it is, we call \verb!make_simple! on the RHS (the false portion) and append the TAC that was created. After the false branch we create a jump to the end of the \verb!IF! statement with a similar label that will be defined later on: \verb!__ifXend!. 
 \\ \ \\ \
 In both cases (with and without an \verb!ELSE!) the true portion of the \verb!IF! statement is now translated. We generate a \verb!TT_LABEL! denoting the start of the true section (as we discussed earlier: \verb!__ifXtrue!). The true branch is now passed to \verb!make_simple!. Finally, to complete the \verb!IF! statement, the aforementioned end label is appended.
-	\item[WHILE] While statements are rewritten as \verb!IF! statements with a loop to jump back to the \verb!WHILE! condition.
+	\item[WHILE] While statements are rewritten as \verb!IF! statements, but with a jump back to the condition at the end of the true branch.
 	\item[Functions]
 		\begin{description}
 			\item[D]
 			\item[d]
 			\item[F]
 		\end{description}
-	\item[RETURN]
+	\item[RETURN] For a return statement, if the LHS is not null, it is passed to \verb!make_simple!. If the LHS is an identifier, then this identifier is searched for in the environment. Identifiers may appear on the LHS if the function returns a function or integer-typed variable, for instance. A type check is performed on the return value to ensure it is consistent with the function definition. We now append a \verb!TT_RETURN! \verb!tac_quad! and set the operand1 member to the returned value (or null for a void function).
 \end{description}
 
 \subsection{Output of tac\_quads}
