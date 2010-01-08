@@ -7,16 +7,32 @@ Throughout the design of the three address code, it was important to keep the pu
 	\ \\The \emph{intermediate code generation module} translates language-specific constructs in the AST into more general constructs \ldots One criterion for the level of the intermediate code is that it should be reasonably straightforward to generate machine code from it for various machines \ldots \cite{grune2000}.
 \end{quotation}
 \ \\
-In order to genericise the instructions as much as possible, the instruction set provides no special instructions for \verb!WHILE! loops, inner functions or variable type specific operations. The instruction set is as follows, the syntax of the statements will be discussed briefly afterwards.
+In order to genericise the instructions as much as possible, the instruction set provides no special instructions for \verb!WHILE! loops, inner functions or variable type specific operations. The instruction set is described in table \ref{tab:instruction-set}. The \textbf{overall} syntax of the TAC instructions will also be discussed briefly afterwards.
 \ \\ \ \\
-\begin{tabular}{|p{5.5cm}|p{3.5cm}|p{7cm}|}
-	\hline
+As mentioned in section \ref{sec:tacshortintro}, it is not currently possible to input TAC directly to the code generator. Table \ref{tab:instruction-set} only describes the syntax and semantics of the TAC instructions as generated from the AST provided by the parser. If TAC input \emph{was} entered directly by the user, the scheme would need to be consistent with the details provided below.
+\ \\
+\section{Instruction Set}
+\begin{longtable}{|p{5.5cm}|p{3.5cm}|p{7cm}|}
+	\caption[]{Instruction Set \label{tab:instruction-set}}\\
+	\hline	
 	\textbf{Instruction} & \textbf{TAC Type} & \textbf{Description} \\ \hline
+	\endfirsthead
+	\caption[]{(Continued from previous page)}\\	
+	\hline \textbf{Instruction} & \textbf{TAC Type} & \textbf{Description} \\ \hline
+	\endhead
 	\verb!Label:! & TT\_LABEL & Labels can be made up of any alphanumeric characters. The AST $\rightarrow$ TAC translation utilises double underscore to denote jumps within \verb!IF! statements, e.g. \verb!__if1end! \\ \hline
 	\verb!_FunctionLabel:! & TT\_FN\_DEF & Function labels are prefixed with a single underscore \\ \hline
 	\verb![result = ] CallFn <FnName>! & TT\_FN\_CALL & \verb!<FnName>! is the function that should be invoked. The \verb![result = ]! portion is optional if no return value is expected \\ \hline
 	\verb!InitFrame <FrameSize>! & TT\_INIT\_FRAME & \verb!<FrameSize>! is the \textbf{number} of locals in the local environment of this function \\ \hline
 	\verb!PopParam <Var>! & TT\_POP\_PARAM & Each formal parameter must be popped as part of the function definition \\ \hline
 	\verb!PushParam <Value>! & TT\_PUSH\_PARAM & Each actual parameter must be pushed as part of a function call. Parameters must be pushed in \textbf{reverse} order. If a function has parameters \verb!int a, int b!, the caller must push the value for \verb!b! before the value for parameter \verb!a!\\ \hline
-	\verb!If <Cond.> Goto <TrueJmp>! & TT\_IF & \verb!<Cond.>! is the branch condition, this should be an integer, temporary or variable. \verb!<TrueJmp>! is a label that will be jumped to when \verb!<Cond.>! is true\\ \hline
-\end{tabular}
+	\verb!If <Cond.> Goto <TrueJmp>! & TT\_IF & \verb!<Cond.>! is the branch condition, this should be an integer, temporary or variable \verb!<TrueJmp>! is a label that will be jumped to when \verb!<Cond.>! is true\\ \hline
+	\verb!<Result> = <Value>! & TT\_ASSIGN & \verb!<Result>! is the name of a variable into which the value of \verb!<Value>! will be stored\\ \hline
+	\verb!Goto <Label>! & TT\_GOTO & \verb!<Label>! is a label that will immediately be jumped to\\ \hline
+	\verb!<Result> = <Op1> <Op> <Op2>! & TT\_OP & \verb!<Result>! is where the value of of the operation will be stored (temporary or variable), \verb!<Op1>! is the first operand, \verb!<Op2>! is the second operand and \verb!<Op>! is an operator: \verb`+, -, *, /, %, ==, >, <, <=, >=, !=`\\ \hline
+	\verb!Return <Value>! & TT\_RETURN & \verb!<Value>! is the return value. A value may be omitted if the function has a \verb!VOID! return type\\ \hline
+	\verb!PrepareToCall <ParamCount>! & TT\_PREPARE & \verb!<ParamCount>! is the number of parameters that are about to be pushed as part of a function application\\ \hline
+	\verb!BeginFn <FnName>! & TT\_BEGIN\_FN & \verb!<FnName>! is the name of a function that is about to be defined\\ \hline	
+	\verb!FnBody! & TT\_FN\_BODY & This statement is used after all of the formal parameters have been popped and denotes the start of the function body\\ \hline
+	\verb!EndFn! & TT\_END\_FN & This instruction denotes the end of a function\\ \hline	
+\end{longtable}
