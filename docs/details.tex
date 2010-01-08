@@ -48,6 +48,9 @@ Within the limited time that we had for the whole project and the testing comple
 	\item Return values are type-checked, but no effort is made to detect functions that do not return a value, when they should.
 \end{itemize}
 
+\subsection{Testing}
+To test the interpreter I wrote a small regression testing framework called bungee\footnote{\url{http://github.com/henrythacker/bungee}}, after every change the script was fired off to ensure that all tests continue to yield the correct results. Unfortunately it will not run on the BUCS machines because certain Ruby dependencies are unavailable.
+
 \begin{figure}[p]
 	\includegraphics[scale=0.7]{environments-include.pdf}
 	\caption{Environment Layout - Environment $\rightarrow$ Code relationship}
@@ -146,7 +149,7 @@ Up until now, the description of the recursive function \verb!make_simple! has m
 \ \\ \ \\
 \verb!print_tac! is another recursive function that walks over the list of generated \verb!tac_node!s and writes out the ``human readable" form of each quad. The rewrite rules for each TAC operation are given below.
 \begin{description}
-	\item[TT\_LABEL]
+	\item[TT\_LABEL] 
 \end{description}
 
 \begin{figure}[p]
