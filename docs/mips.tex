@@ -3,4 +3,37 @@
 \subsection{Introduction}
 Before embarking upon this project, very little was known about the MIPS architecture and code generation, in general. These were the main areas that were researched. The code generator that was produced takes in a list of Three Address Code instructions (as described fully in section \ref{sec:tacintro}) and outputs MIPS code that is designed to be run in the SPIM emulator\footnote{\url{http://pages.cs.wisc.edu/~larus/spim.html}}. MIPS code can be generated for most input programs, but for a few exceptions that will be mentioned at the end of this section. The main body of the code generator is another recursive procedure which walks the list of TAC instructions, generating code on the fly.
 
-\subsection{General Ideas}
+\subsection{The MIPS Architecture}
+The MIPS architecture and associated series of RISC (\emph{Reduced Instruction Set Computer}) CPUs were pioneered by Professor John Hennessy of Stanford University in the 1980s. The RISC design strategy concentrates on providing CPU instructions that do less, but execute quickly.  RISC is often referred to as load/store, as generally these are the only operations that can access main memory. All other operations require the operands to exist within ``Registers". Thus, decisions surrounding register allocation form a large part of the code generation procedure. It is the efficient allocation and use of these registers that lead to a more optimised program. The registers of a typical MIPS machine are given in table \ref{table:registers}.
+
+\subsection{Register Descriptors}
+While compiling for a real machine, it is necessary to have a virtual view onto the internal state of the machine as the program is compiled. This is achieved through use of register descriptors which describe the contents of the registers. In order to do this within the \mmc compiler, \verb!registers.c! provides several useful functions which, when combined, form the basis of the compiler's register allocation procedures.
+
+\begin{description}
+	\item[already\_in\_reg] - 
+\end{description}
+
+
+\subsection{The Code Generator}
+\begin{figure}[p]
+	\begin{longtable}{|p{3cm}|p{3cm}|p{9cm}|}
+		\caption[]{MIPS Registers \label{table:registers}}\\	
+		\hline \textbf{Register} & \textbf{Internal Name} & \textbf{Description} \\ \hline
+		\endfirsthead
+		\caption[]{MIPS Registers - Continued from previous page}\\	
+		\hline \textbf{Register} & \textbf{Internal Name} & \textbf{Description} \\ \hline
+		\endhead
+		\$zero & \$0 & This register conveniently always contains zero \\ \hline
+		\$at & \$1 & Assembler temporary, reserved for use by the assembler \\ \hline	
+		\$v0-\$v1 & \$2-\$3 & Used for function return values \\ \hline	
+		\$a0-\$a3 & \$4-\$7 & Reserved for the first 4 arguments to a function \\ \hline	
+		\$t0-\$t7 & \$8-\$15 & Temporaries (Caller save) \\ \hline	
+		\$s0-\$s7 & \$16-\$23 & Temporaries (Callee save) \\ \hline	
+		\$t8-\$t9 & \$24-\$25 & Temporaries (Caller save) \\ \hline		
+		\$k0-\$k1 & \$26-\$27 & Reserved for operating system \\ \hline			
+		\$gp & \$28 & Global Pointer \\ \hline					
+		\$sp & \$29 & Stack Pointer \\ \hline					
+		\$fp & \$30 & Frame Pointer \\ \hline					
+		\$ra & \$31 & Return Address \\ \hline								
+	\end{longtable}
+\end{figure}
