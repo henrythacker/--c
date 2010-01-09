@@ -54,9 +54,9 @@ At the start of the code generation procedure, the register descriptor array \ve
 After the TAC is ready to iterate over, a special \verb!mips_instruction! is output from \verb!codegen_utils.c! that writes the \verb!.text! and \verb!.data! segments into the output. A special constant \verb!EOL! is defined as an end of line character, for when the program's result will eventually be printed. Now we loop over the various \verb!tac_quad!s recursively printing the relevant code for each type of quad. A few examples of this will be given below.
 
 \begin{description}
-	\item[TT_BEGIN_FN] A new function label \verb!mips_instruction! is created for this function. Function labels take the user-defined name of the function, prefixed with an underscore. The global variable \verb!current_fn! is set as a reference to this function.
-	\item[TT_INIT_FRAME] The frame size that was present in the \verb!tac_quad! is the size of locals in the environment. In MIPS, each variable will take up 4 bytes, so the frame size is passed to \verb!activation_record_size! which adds on 4 (one for each of the special fields in the activation record: Previous \$fp, Static Link, Dynamic Link and Frame Size). This number is multiplied by 4 to get the number of bytes that are required to store the activation record.
-	\item[TT_FN_BODY] The return address that was stored in \$s7 as part of the code for \verb!TT_INIT_FRAME! is now pushed into the stack.
+	\item[TT\_BEGIN\_FN] A new function label \verb!mips_instruction! is created for this function. Function labels take the user-defined name of the function, prefixed with an underscore. The global variable \verb!current_fn! is set as a reference to this function.
+	\item[TT\_INIT\_FRAME] The frame size that was present in the \verb!tac_quad! is the size of locals in the environment. This frame size is passed to the \verb!activation_record_size! function which adds on 4 (one for each of the special fields in the activation record: Previous \$fp, Static Link, Dynamic Link and Frame Size). This function then multiplies this by 4 to get the number of bytes that are required to store the activation record.
+	\item[TT\_FN\_BODY] The return address that was stored in \$s7 as part of the code for \verb!TT_INIT_FRAME! is now pushed into the stack.
 	\item[]
 \end{description}
 
