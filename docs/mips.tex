@@ -9,7 +9,7 @@ The MIPS architecture and associated series of RISC (\emph{Reduced Instruction S
 \subsection{Register Descriptors}
 While compiling for a real machine, it is necessary to have a virtual view onto the internal state of the machine as the program is compiled. This is achieved through use of register descriptors which describe the contents of the registers. In order to do this within the \mmc compiler, for each register in table \ref{table:registers} we create a register descriptor. In practice, we only address a few of these registers. The structure used for the register descriptors is presented in figure \ref{fig:descriptor}.
 \ \\ \ \\
-Our global view of registers is stored in an array called \verb!regs!, thus we can go directly to \verb!regs[register_id]! to look into the contents. In the code, an enum (\verb!sys_register! in \verb!codegen_utils.h!) exists so that we can conveniently use the register names to reference registers within the C code itself (i.e. \verb!regs[$sp]!).
+Our global view of registers is stored in an array called \verb!regs!, thus we can go directly to \verb!regs[reg_id]! to look into the contents. In the code, an enum (\verb!sys_register! in \verb!codegen_utils.h!) exists so that we can conveniently use the register names to reference registers within the C code itself (i.e. \verb!regs[$sp]!).
 
 \subsection{Register Allocation}
 One of the restrictions of the code generator, is that it will only utilise registers \$t0-\$t9 for user data. \verb!registers.c! provides several useful functions which, when combined, form the basis of the compiler's register allocation procedures.
@@ -37,13 +37,13 @@ At runtime we do not have full-access to the type of the information that was av
 \ \\ \ \\
 As discussed in the introduction to this project, the more interesting features of \mmc (inner functions and function variables) have implications on the implementation. In other languages which do not support inner functions, the scope of a function can be trashed after the function exits as there is no further use for the local state. In \mmc and languages such as Pascal, because state is captured when functions are defined, there are cases where we must keep the Activation Records in memory, such that variables / functions can be correctly resolved.
 \ \\ \ \\
-The first implication, is that our Activation Record must contain a static link to the containing function's stack frame. This information is presented well with examples in Muchnick's book. The re-designed activation record in use can be seen in figure \ref{fig:AR}.
+The first implication, is that our Activation Record must contain a static link to the containing function's stack frame. This information is presented well with examples in Muchnick's book. Having read this chapter, the Activation Record was redesigned and the final version can be seen in figure \ref{fig:AR}.
 \begin{quotation}
 \ \\
 ``\ldots if the source language supports statically nested scopes, the frame contains a static link to the nearest invocation of the statically containing procedure, which is the stack frame in which to look up the value of a variable declared in that procedure \ldots"\cite{muchnick1997}
 \end{quotation}
-
-
+\ \\ \ \\
+Another implication has already been touched upon. We mentioned the fact that the nested functions and function typed variables require Activation Records to stay around longer than they would on a stack. To solve this problem, Activation Records are created in the heap instead of the stack. On entry to each function, a heap allocated activation record is created and populated. The stack is \emph{still} used for the return address, as the push / pop nature of a stack are convenient. The ``stack pointer" equivalent for these heap allocated activation records is stored in \$s0 and the frame pointer in \$fp.
 
 \subsection{Code Generation Procedure}
 
