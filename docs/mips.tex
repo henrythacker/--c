@@ -7,14 +7,49 @@ Before embarking upon this project, very little was known about the MIPS archite
 The MIPS architecture and associated series of RISC (\emph{Reduced Instruction Set Computer}) CPUs were pioneered by Professor John Hennessy of Stanford University in the 1980s. The RISC design strategy concentrates on providing CPU instructions that do less, but execute quickly.  RISC is often referred to as load/store, as generally these are the only operations that can access main memory. All other operations require the operands to exist within ``Registers". Thus, decisions surrounding register allocation form a large part of the code generation procedure. It is the efficient allocation and use of these registers that lead to a more optimised program. The registers of a typical MIPS machine are given in table \ref{table:registers}.
 
 \subsection{Register Descriptors}
-While compiling for a real machine, it is necessary to have a virtual view onto the internal state of the machine as the program is compiled. This is achieved through use of register descriptors which describe the contents of the registers. In order to do this within the \mmc compiler, \verb!registers.c! provides several useful functions which, when combined, form the basis of the compiler's register allocation procedures.
+While compiling for a real machine, it is necessary to have a virtual view onto the internal state of the machine as the program is compiled. This is achieved through use of register descriptors which describe the contents of the registers. In order to do this within the \mmc compiler, for each register in table \ref{table:registers} we create a register descriptor. In practice, we only address a few of these registers. The structure used for the register descriptors is presented in figure \ref{fig:descriptor}.
+\ \\ \ \\
+Our global view of registers is stored in an array called \verb!regs!, thus we can go directly to \verb!regs[register_id]! to look into the contents. In the code, an enum (\verb!sys_register! in \verb!codegen_utils.h!) exists so that we can conveniently use the register names to reference registers within the C code itself (i.e. \verb!regs[$sp]!).
+
+\subsection{Register Allocation}
+One of the restrictions of the code generator, is that it will only utilise registers \$t0-\$t9 for user data. \verb!registers.c! provides several useful functions which, when combined, form the basis of the compiler's register allocation procedures.
 
 \begin{description}
-	\item[already\_in\_reg] - 
+	\item[already\_in\_reg] - Given a \verb!value! (and various other non-important parameters), if the value already exists in a register, we return the register it is in, otherwise a ``not found" constant is returned.
+	\item[first\_free\_reg] - Return the first free register (if available). If all registers are full a ``No registers free" constant is returned. 
+	\item[choose\_best\_reg] - This function is the main register allocation function. It encodes the logic for the register allocation strategy, which is detailed below. Given a \verb!value!, it is guaranteed to return a register where the value has been loaded into.
+	\item[save\_t\_reg] - Given a register identifier, the contents will be saved to the correct place in main memory, if the value has been modified
+	\item[save\_t\_regs] - Any register with a modified value will be saved out to the correct places in main memory
 \end{description}
+\ \\
+The register allocation strategy is a simple one, based on material from our lectures. The process is described in steps below. The steps outlined are part of the \verb!cg_find_variable! function in \verb!mips.c!
+
+\begin{itemize}
+	\item When asked for a register for variable $X$, we check whether the variable is already in a register using \verb!already_in_reg!. If so, we return the identifier for this register.
+	\item Next, we see if there is a free register into which $X$ can be loaded. If so, we update the descriptor and return the register identifier. (This and the next step are combined within \verb!choose_best_register!)
+	\item If the value is still not placed then all of our registers have been exhausted. The variable that has been in the registers for the longest time will be removed (writing the modified value back to memory, if necessary).
+\end{itemize}
+\ \\
+The removal of the longest residing variable in registers is not necessarily a wise choice. The variable allocation procedure is one part of the MIPS stage that is not particularly optimal, this will be discussed in greater depth later on.
+
+\subsection{Runtime Support}
+
+\subsection{Code Generation Procedure}
 
 
-\subsection{The Code Generator}
+\begin{figure}[p]
+	\begin{verbatim}
+	typedef struct register_contents {
+	    value *contents; /* Value stored in the register */
+	    int accesses; /* How many times the value has been referenced */
+	    int assignment_id; /* What order this assignment was made */
+	    int modified; /* Have the contents been modified since load? */
+	}register_contents;
+	\end{verbatim}
+	\caption{Register descriptor record}
+	\label{fig:descriptor}
+\end{figure}
+
 \begin{figure}[p]
 	\begin{longtable}{|p{3cm}|p{3cm}|p{9cm}|}
 		\caption[]{MIPS Registers \label{table:registers}}\\	
