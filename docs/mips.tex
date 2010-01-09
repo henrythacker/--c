@@ -42,7 +42,7 @@ The first implication, is that our Activation Record must contain a static link 
 \ \\
 ``\ldots if the source language supports statically nested scopes, the frame contains a static link to the nearest invocation of the statically containing procedure, which is the stack frame in which to look up the value of a variable declared in that procedure \ldots"\cite{muchnick1997}
 \end{quotation}
-\ \\ \ \\
+\ \\
 Another implication has already been touched upon. We mentioned the fact that the nested functions and function typed variables require Activation Records to stay around longer than they would on a stack. To solve this problem, Activation Records are created in the heap instead of the stack. On entry to each function, a heap allocated activation record is created and populated. The stack is \emph{still} used for the return address, as the push / pop nature of a stack are convenient. The ``stack pointer" equivalent for these heap allocated activation records is stored in \$s0 and the frame pointer in \$fp.
 
 \subsection{Code Generation Procedure}
