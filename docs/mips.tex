@@ -45,9 +45,16 @@ The first implication, is that our Activation Record must contain a static link 
 \ \\
 Another implication has already been touched upon. We mentioned the fact that the nested functions and function typed variables require Activation Records to stay around longer than they would on a stack. To solve this problem, Activation Records are created in the heap instead of the stack. On entry to each function, a heap allocated activation record is created and populated. The stack is \emph{still} used for the return address, as the push / pop nature of a stack is convenient. The ``stack pointer" equivalent for these heap allocated activation records is stored in \$s0 and the frame pointer in \$fp.
 
+\subsection{Code Representation}
+Like TAC is stored internally in \verb!tac_quad! structures, MIPS instructions are held in a \verb!mips_instruction! structure. A few other structures are used for different types of instruction operands. The relevant structures can be examined in figure \ref{fig:mipsinstr}. Like the \verb!tac_quad! structures, the code is built up as a linked list, before being printed by a special \verb!print_mips! routine.
+
 \subsection{Code Generation Procedure}
+At the start of the code generation procedure,
 
-
+\subsection{Optimisation}
+% Zero Register Substitution
+% Function variable helper sub is not written out if not needed by program
+% Optimisation.C
 
 \begin{figure}[p]
 	\begin{verbatim}
@@ -89,4 +96,50 @@ Another implication has already been touched upon. We mentioned the fact that th
 	\includegraphics[scale=0.6]{ar-include.pdf}
 	\caption{Activation Record - Design}
 	\label{fig:AR}
+\end{figure}
+
+\begin{figure}[p]
+	\begin{verbatim}
+		enum sys_register {
+		    $zero = 0, 
+		    $at = 1,	
+		    $v0 = 2, $v1 = 3,
+		    $a0 = 4, $a1 = 5, $a2 = 6, $a3 = 7,
+		    $t0 = 8, $t1 = 9, $t2 = 10, $t3 = 11, $t4 = 12, $t5 = 13, $t6 = 14,	$t7 = 15,					
+		    $s0 = 16, $s1 = 17, $s2 = 18, $s3 = 19, $s4 = 20, $s5 = 21, $s6 = 22, $s7 = 23,
+		    $t8 = 24, $t9 = 25,
+		    $k0 = 26, $k1 = 27,
+		    $gp = 28,
+		    $sp = 29,
+		    $fp = 30,
+		    $ra = 31				
+		}sys_register;
+
+		typedef struct register_offset {
+		    enum sys_register reg;
+		    int offset;
+		}register_offset;
+
+		typedef union operand {
+		    enum sys_register reg;
+		    struct register_offset* reg_offset;
+		    int constant;
+		    char *label;
+		}operand;
+		
+		typedef struct mips_instruction {
+		    char *operation;
+		    int operand1_type;
+		    int operand2_type;
+		    int operand3_type;
+		    union operand *operand1;
+		    union operand *operand2;
+		    union operand *operand3;		
+		    char *comment;
+		    int indent_count;
+		    struct mips_instruction *next;
+		}mips_instruction;
+	\end{verbatim}
+	\caption{MIPS Instruction structure}
+	\label{fig:mipsinstr}
 \end{figure}
