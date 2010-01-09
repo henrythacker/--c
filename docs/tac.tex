@@ -39,13 +39,18 @@ As mentioned in section \ref{sec:tacshortintro}, it is not currently possible to
 
 \section{Overall Syntax}
 
-It is not enough to only consider the semantics and syntax of each individual instruction, but also to examine how these instructions can be combined. Each syntax rule is given in terms of a pseudo grammar-like language and a textual description.
+It is not enough to only consider the semantics and syntax of each individual instruction, but also to examine how these instructions can be combined. Each syntax rule is given in terms of a pseudo grammar-like language and a textual description. Although the grammar definitions may seem unwieldy on first glance, they help formally define my textual explanation and could easily be adapted to actually implement the TAC parser that is currently missing. The grammar rules presented here are \textbf{not} used as part of the project and simply serve to supplement the textual description.
 
 \subsection{Function Declaration}
+\label{sec:funcdec}
 A function declaration consists of a \verb!BeginFn FnName! instruction, followed by the function label prefixed with an underscore: \verb!_FnName!. An \verb!InitFrame! instruction is then required (with the number of the function locals): \verb!InitFrame 10!. All parameters must now be ``popped" in separate \verb!PopParam! instructions. If the function takes no parameters then no \verb!PopParam! instructions are required. To indicate the start of the function body, the \verb!FnBody! instruction must follow. At this point, the TAC for the function body is appended. At the end of the body, a \verb!EndFn! instruction must be used to indicate the end of the function.
 
 \begin{verbatim}
-	EOL := "\n"
+	EOL :=
+	    : "\n"
+	    | "\r" "\n"
+	    | EOL "\r"
+	    | EOL "\r" "\n"
 	
 	Pop_Param_List :=
 	    :  TT_POP_PARAM EOL
@@ -62,7 +67,11 @@ A function declaration consists of a \verb!BeginFn FnName! instruction, followed
 A valid function application must first start with a \verb!PrepareToCall [ArgNumber]! instruction. Each of the actual parameter values are now ``pushed", in \textbf{reverse} order. Argument pushing is achieved through use of the \verb!PushParam! instruction. The number of required push operations is indicated by the value of \verb![ArgNumber]! in the \verb!PrepareToCall! instruction. If \verb![ArgNumber]! $ = 0$, then no \verb!PushParam! instructions are required. Finally, \verb!CallFn [FnName]! is used to invoke the function with the correct parameters.
 
 \begin{verbatim}
-	EOL := "\n"
+	EOL :=
+	    : "\n"
+	    | "\r" "\n"
+	    | EOL "\r"
+	    | EOL "\r" "\n"
 	
 	Push_Param_List :=
 	    :  TT_PUSH_PARAM EOL
@@ -73,5 +82,95 @@ A valid function application must first start with a \verb!PrepareToCall [ArgNum
 	    | TT_PREPARE EOL TT_FN_CALL EOL
 \end{verbatim}
 
-\subsection{} %%%%%%% Link both the grammars together
+\subsection{TAC Syntax}
+With the two definitions above, it is possible to write rules which describe a valid TAC input. The grammar below a goal \verb!Valid_TAC! which we are trying to aim for when writing a valid programme in TAC representation. To meet the criteria for \verb!Valid_TAC!, there must be \textbf{at least} one function declaration. On either side of a function declaration, variable assignments and operations are permitted (i.e. the use of global variables). To examine what TAC is permissible within a function declaration, we must backtrack slightly. With the \textbf{Function Declaration} rule above (see section \ref{sec:funcdec}), we make a reference to \verb!TAC_Instructions! which is defined below. \verb!TAC_Instruction! is any instruction that is permitted within the body of a function. This rule allows us to nest function declarations, use \verb!IF! statements, jumps, label declarations and call other functions.
+\ \\ \ \\
+Although this language has now been completely specified, there are still some constructs which may not be backwards-compatible with the \mmc parser (please see figure \ref{fig:parsefail}). An equivalent version that will parse is presented in figure \ref{fig:parsefix}. Such statements (\verb!TT_OP!) \textbf{are} permissible in the TAC specification to allow for assigning a calculation to a global variable during variable initialisation (see the TAC equivalent in figure \ref{fig:parsefailtac}). This is an interesting aside, but not a problem as such, because we have met the target that all valid \mmc programs can be converted to a TAC representation with the instruction set that has been presented.
+\begin{verbatim}
+	EOL :=
+	    : "\n"
+	    | "\r" "\n"
+	    | EOL "\r"
+	    | EOL "\r" "\n"
+	
+	Variable_Declaration := 
+	    : TT_ASSIGN EOL
+	    | Variable_Declaration TT_ASSIGN EOL
+	
+	Variable_Operations :=
+	    : TT_OP EOL
+	    | Variable_Operations TT_OP EOL
+		
+	Variable_Use :=
+	    : Variable_Declaration
+	    | Variable_Operations
+	    | Variable_Use Variable_Declaration
+	    | Variable_Use Variable_Operations
+	
+	TAC_Instructions :=
+	    : Variable_Use
+	    | Function_Declaration
+	    | Function_Application
+	    | TT_IF EOL
+	    | TT_GOTO EOL
+	    | TT_RETURN EOL
+	    | TT_LABEL EOL
+	    | TAC_Instructions Variable_Use
+	    | TAC_Instructions Function_Declaration
+	    | TAC_Instructions Function_Application
+	    | TAC_Instructions TT_IF EOL
+	    | TAC_Instructions TT_GOTO EOL
+	    | TAC_Instructions TT_RETURN EOL
+	    | TAC_Instructions TT_LABEL EOL
+	
+	Valid_TAC :=
+	    : Function_Declaration
+	    | Variable_Use Function_Declaration
+	    | Variable_Use Function_Declaration Variable_Use
+	    | Valid_TAC Function_Declaration
+	    | Valid_TAC Variable_Use
+
+	Goal := Valid_TAC
+	
+\end{verbatim}
+
+\begin{figure}[p]
+	\begin{verbatim}
+		int a = 15;
+		a = a - 12; /* --C parser will not allow */
+		            /* TAC does allow such statements */
+		int main() {
+			return a;
+		}
+	\end{verbatim}
+	\caption{Modifying global variables - \mmc}
+	\label{fig:parsefail}
+\end{figure}
+
+\begin{figure}[p]
+	\begin{verbatim}
+		int a = 15 - 12;
+
+		int main() {
+			return a;
+		}
+	\end{verbatim}
+	\caption{Fixed: Modifying global variables - \mmc}
+	\label{fig:parsefix}
+\end{figure}
+
+\begin{figure}[p]
+	\begin{verbatim}
+		_t1 = 15 - 12 /* TT_OPs are allowed on global vars */
+		a = _t1
+		BeginFn main
+		_main:
+		InitFrame 0
+		FnBody
+		Return a
+		EndFn
+	\end{verbatim}
+	\caption{Modifying global variables - TAC}
+	\label{fig:parsefailtac}
+\end{figure}
 
