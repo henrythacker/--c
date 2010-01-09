@@ -1,0 +1,148 @@
+\section{Intermediate Representation}
+
+\subsection{Introduction}
+\label{sec:tacshortintro}
+In the coursework specification we were asked to develop a three address code representation of our own design. The input to the Three Address Code generator is the AST (\emph{Abstract Syntax tree}). The coursework specification indicates that it should be possible to read TAC (\emph{Three Address Code}) from a flat file. This was not implemented due to time pressures and it was felt that it was more important to move onto code generation, rather than write a TAC parser. The next section \ref{sec:tacintro} presents further background information behind the rationale of using a form of intermediate representation and the associated design choices that were made.
+
+\subsection{Relation to the Interpreter}
+The TAC is generated in a very similar way to how the interpreter works, using a large recursive function which handles all the different types of \verb!NODE!. Instead of evaluating the result of operations, we are interested in building TAC ``quadruples", internally referred to as a \verb!tac_quad!. Each \verb!tac_quad! is one TAC instruction and contains a \textbf{maximum} of three addresses (operand1, operand2, result) and several other pieces of metadata (please see figure \ref{fig:tacquad}). A \verb!tac_quad! does not contain text or lexemes, each address points to a \verb!value! within our environment. Thus, we are able to perform type checking and environment traversal, just as the interpreter does. The TAC generator generates a linked list of these \verb!tac_quad!s that represent the user-supplied \mmc source.
+\ \\ \ \\
+As with the interpreter, a pre-scan is done to find all globally accessible functions. All of the global functions which are found are entered into the global environment. We have to perform this pre-scan, because when we look up function names, we must be able to point our \verb!tac_quad!s to the correct references within the relevant environment. No notion of an entry-point is required during TAC generation, because the AST is traversed in its entirety from top to bottom, generating \verb!tac_quad!s on the fly. Unlike the interpreter, global variables are not found in the pre-scan, as this can be done as part of the main scan mentioned below.
+
+\subsection{Temporaries} \label{sec:temporaries}
+In Three Address Code, we are limited to a \textbf{maximum} of three addresses. Obviously, we cannot expect to complete any given operation in such a limited space, i.e. : $a = 1 + 3 + 2 + 10$ (4 operations, 5 addresses). In lectures, we were introduced to the concept of temporaries. We can assume that we have an infinite number of temporaries, but they must only appear on the LHS of an expression once. This allows us to split up complex expressions into ``\textbf{simple}" subexpressions stored in temporaries, that can be combined. This ``making simple" procedure is important in the implementation. Thus, our previous example becomes written as a series of simple instructions, seen in listing \ref{lst:temporaries}.
+\ \\
+\begin{lstlisting}[showstringspaces=false,language=java,breaklines=true, backgroundcolor=\color{light-gray}, captionpos=b, label={lst:temporaries}, caption={Using Temporaries}]
+	_t1 = 1 + 3
+	_t2 = 2 + 10
+	a = _t1 + _t2
+\end{lstlisting}
+\ \\ \ \\
+In the TAC Generator implementation, temporaries are embraced as full members of the environment. Temporaries are not treated any differently from variables and are accessed using the same functions. 
+
+\subsection{Building tac\_quads}
+After we have completed the pre-scan to populate our global environment, a full scan is made starting from the top of the AST. The TAC instructions are formed by examining each \verb!NODE! and evaluating the LHS and RHS until we have enough information to form a single, complete TAC instruction. The concept of ``make simple" was introduced in section \ref{sec:temporaries} and it refers to the process of reducing complex expressions to a temporary (i.e. the simplest form possible). Our recursive function in the TAC generator is actually called \verb!make_simple! and at each stage, it tries to reduce a subexpression to the simplest form it can (often a temporary). The steps that are taken for a few different \verb!NODE! types are given below.
+
+\begin{description}
+	\item[Arithmetic Operator] An integer temporary is created in preparation to hold to results of the arithmetic expression. The LHS and RHS of the operator are passed recursively to \verb!make_simple! to coerce them into integers. If the LHS or RHS are not simple integers or variables, they may themselves be made into integer temporaries. A call is made to \verb!make_quad_value! to build a \verb!tac_quad! of type \verb!TT_OP! (TAC type operation). Operands 1 and 2 are set to reference the LHS and RHS \verb!value!s that were returned by the calls to \verb!make_simple!. The result member of \verb!tac_quad! is set to reference the temporary that we created earlier to hold the result. The resultant \verb!tac_quad! is written into the linked list of TAC statements generated so far.
+	\item[= Operator] Both the LHS (assignment variable) and RHS (assignment value) are passed to \verb!make_simple!. The current environment is searched to ensure that the assignment variable has already been defined, if not, an error is raised. During simplification, the RHS will be reduced to a simple constant, variable or temporary. The simplified value can then be type checked against the declaration for the assignment variable, to ensure that the assignment is valid. If so, the assignment is made in the environment. A \verb!tac_quad! is generated of type \verb!TT_ASSIGN!, an operation of ``$=$", operand 1 is set to reference the assignment value and result is set to reference the assignment variable. The \verb!tac_quad! is added to our list of existing \verb!tac_quad!s.
+	\item[APPLY] Again, the LHS and RHS of the AST are passed to \verb!make_simple!. The LHS contains the function name, while the RHS contains the list of actual parameters to be passed to the function. The environment is searched to check that a function by this name exists in local scope. If the function can not be found an error is raised. Prior to making the actual function call, a few different TAC quads are created to assist during the code generation stage. Firstly a ``prepare to call" (\verb!TT_PREPARE!) quad is created with a reference to the function (please see the next chapter for the syntax), to instruct that a function call is about to be made. Next, the actual parameters list (RHS) is passed to another recursive function which generates push statements (\verb!TT_PUSH_PARAM!) for each parameter in the \textbf{reverse order} of their definition. This was decided after reading a technique mentioned in ``Modern Compiler Design"\cite{grune2000}: ``When parameters are passed on the stack, the last parameter is pushed first".
+\\ \ \\ \
+From the function definition found in the environment, we see if a return type was defined. A return type may not be available if the function is a function typed variable, as this will only be bound to another function at runtime. If a return type was found, we create an appropriately-typed temporary in which to store the result of the function application. If no return type was available, a typeless temporary is created. A \verb!TT_FN_CALL! \verb!tac_quad! is generated with a reference to the function definition stored in the operand1 member and a reference to our return value temporary in the result member. The created ``result temporary" is returned as the result of the \verb!make_simple! call, so that the function's result can be used in other expressions. 
+	\item[IF and ELSE] On the LHS of an \verb!IF! statement is the condition. The condition is passed to \verb!make_simple! to simplify it to a single term. A TAC goto statement is generated that is jumped to in the event of the condition being true. The label name is automatically generated as \verb!__ifXtrue! (where $X$ is an integer which increments for each \verb!IF! statement that is created). The actual label itself will be defined later on.
+\\ \ \\ \
+The node on the RHS is examined to see if it is an \verb!ELSE! statement. If it is, we call \verb!make_simple! on the RHS (the false portion) and append the TAC that was created. After the false branch we create a jump to the end of the \verb!IF! statement with a similar label that will be defined later on: \verb!__ifXend!. 
+\\ \ \\ \
+In both cases (with and without an \verb!ELSE!) the true portion of the \verb!IF! statement is now translated. We generate a \verb!TT_LABEL! denoting the start of the true section (as we discussed earlier: \verb!__ifXtrue!). The true branch is now passed to \verb!make_simple!. Finally, to complete the \verb!IF! statement, the aforementioned end label is appended.
+	\item[WHILE] While statements are rewritten as \verb!IF! statements, but with a jump back to the condition at the end of the true branch.
+	\item[Functions] Each function declaration generates a minimum of 5 TAC instructions, these are detailed in the relevant sections below. It may help to look at figures \ref{fig:printedtac} and \ref{fig:ast} in addition to the textual description.
+		\begin{description}
+			\item[D] The LHS is passed to \verb!make_simple!. This yields a basic \verb!VT_FUNCTN! value which, by this stage, contains much of the required information regarding the function's definition. This function definition is stored in the environment. Several TAC statements are now generated, the semantics of these statements should be referred to in the next section (section \ref{sec:tacintro}).
+\\ \ \\ \
+Firstly a \verb!TT_BEGIN_FN! is created, with operand1 set to the function reference. Immediately after this, a \verb!TT_FN_DEF! \verb!tac_quad! is created, again with a reference to the function kept in its operand1 member. \verb!TT_FN_DEF! is used to print out the start of function label in the code generator. Next, a \verb!TT_INIT_FRAME! quad is created, with zero entered as operand1. \verb!TT_INIT_FRAME! gives important information about the required frame size (see section \ref{sec:MIPS}) to the code generation stage. However, at this point in the TAC generator, we do not know how large the frame needs to be, until we call \verb!make_simple! on the function body so that the environment becomes filled. By adding a placeholder in the correct place, but with a dummy value, it is possible  to return to this statement and fill in the correct frame size, when it is eventually known.
+\ \\ \ \\
+Next, the \textbf{formal} parameters are each popped off in \verb!TT_POP_PARAM! operations in the \textbf{order that they were defined}. Because the parameters are pushed to \textbf{function calls} in reverse order (see the description of \verb!APPLY! above), we now assume we can read the actual parameters off some type of virtual argument stack, which are now conveniently accessible in the correct order. Each parameter is given a dummy value (0, null, etc.) depending on the parameter type and stored as a regular variable in the environment. Thus, each \verb!TT_POP_PARAM! references the relevant uninitialised variable within the function's environment. To mark the end of parameters and the start of user-supplied code, we append a \verb!TT_FN_BODY! \verb!tac_quad!. Now \verb!make_simple! is called on the RHS (function body).
+\ \\ \ \\
+After all TAC has been generated for the function body, we can query the size of the final environment, using a utility function \verb!env_size!. The previously created \verb!TT_INIT_FRAME! quad is updated with the correct value. Finally, a \verb!TT_END_FN! instruction is created to denote the end of the function.
+			\item[d, F] No TAC instructions are generated here, but a \verb!VT_FUNCTN! \verb!value! is built to pass up to the \verb!D! node. The procedure here is exactly the same as with the interpreter.
+		\end{description}
+	\item[RETURN] For a return statement, if the LHS is not null, it is passed to \verb!make_simple!. If the LHS is an identifier, then this identifier is searched for in the environment. Identifiers may appear on the LHS if the function returns a function or integer-typed variable, for instance. A type check is performed on the return value to ensure it is consistent with the function definition. We now append a \verb!TT_RETURN! \verb!tac_quad! and set the operand1 member to the returned value (or null for a void function).
+\end{description}
+
+\subsection{Output of tac\_quads}
+By the time the \verb!make_simple! call returns, a linked list of complete \verb!tac_quad! structures has been created that constitutes the translation of the user \mmc program into TAC representation. As mentioned previously, these structures do not contain strings or lexemes, but contain pointers in to an environment structure. Originally the \verb!tac_quad! \textbf{did} simply store the lexemes instead of pointers, but the code was refactored after reading several texts and consulting the lecturers. One major source of reference was the course text which summed up the correct path to take.
+\begin{quotation}
+	\ \\
+	``In an implementation [of Three Address Code quads], a source name is replaced by a pointer to its symbol-table entry, where all information about the name is kept." \cite{aho2007}.
+\end{quotation}
+\ \\
+When thinking \emph{purely} about Three Address Code, it is hard to see why pointers into the environment are required at all. In fact, this information does not appear to even be mentioned in the various texts. This is why the \verb!tac_quad!s were originally designed (incorrectly) to use lexemes instead. However, it quickly became clear that because the TAC will be passed into the code-generator, it is useful to have access to scope information (provided by the environment structure already) and the type checking routines that are also available. As well as reducing the code outlay, the environment code was rigorously tested as part of the interpreter.
+\ \\ \ \\
+Up until now, the description of the recursive function \verb!make_simple! has mentioned \verb!NODE! types such as \verb!TT_OP!, \verb!TT_LABEL! etc. This view onto TAC instructions is the way that the TAC generator internally builds and examines the TAC, additionally an optimiser or code-generator would also choose to look at the TAC quads in this fashion. However, as humans, looking at a list of opcodes and pointers is not intuitive, thus a printable TAC representation is created from the instructions with the supplied \verb!print_tac! function (an example is given in figure \ref{fig:printedtac}). Had a TAC parser been implemented (to load TAC from a file, populating the environment), this would also have been the required input language (discussed further in \ref{sec:tacintro}). The \verb!print_tac! function understands the syntax and semantics of the TAC language and is able to print out any given TAC instruction.
+\ \\ \ \\
+\verb!print_tac! is another recursive function that walks over the list of generated \verb!tac_node!s and writes out the ``human readable" form of each quad. The rewrite rules for each TAC operation are given below.
+\begin{description}
+	\item[TT\_LABEL] is written as: \\ \ \verb![to_string(quad->operand1)]:!, e.g: \verb!__if1true:!
+	\item[TT\_FN\_DEF] is written as: \\ \ \verb!_[to_string(quad->operand1)]:!, e.g: \verb!_main:!
+	\item[TT\_FN\_CALL] is written as: \\ \ \verb![correct_string_rep(quad->result)] = CallFn _[correct_string_rep(quad->operand1)]:!, e.g: \verb!_t1 = CallFn _cplusa!
+	\item[TT\_INIT\_FRAME] is written as: \\ \ \verb!InitFrame [correct_string_rep(quad->operand1)]!, e.g: \verb!InitFrame 5!
+	\item[TT\_POP\_PARAM] is written as: \\ \ \verb!PopParam [quad->operand1->identifier]!, e.g: \verb!PopParam a!		
+	\item[TT\_PUSH\_PARAM] is written as: \\ \ \verb!PushParam [correct_string_rep(quad->operand1)]!, e.g: \verb!PushParam 5!
+	\item[TT\_IF] is written as: \\ \ \verb!If [correct_string_rep(quad->operand1)] Goto [correct_string_rep(quad->result)]!, e.g: \verb!If _t1 Goto __if1true!
+	\item[TT\_ASSIGN] is written as: \\ \ \verb![correct_string_rep(quad->result)] [correct_string_rep(quad->op)]! \\ \verb![correct_string_rep(quad->operand1)]!, e.g: \verb!_t2 = 5!
+	\item[TT\_GOTO] is written as: \\ \ \verb!Goto [correct_string_rep(quad->operand1)]!, e.g: \verb!Goto __if4end!
+	\item[TT\_OP] is written as: \\ \ \verb![correct_string_rep(quad->result)]! \verb!=! \verb![correct_string_rep(quad->operand1)]! \\ \verb![correct_string_rep(quad->op)]! \verb![correct_string_rep(quad->operand2)]!,\\ e.g: \verb!_t4 = 5 + _t1!
+	\item[TT\_RETURN] is written as: \\ \ \verb!Return [correct_string_rep(quad->operand1)]!, e.g: \verb!Return _t5!
+		\begin{description}
+			\item[OR] \verb!Return!, if no return value is supplied
+		\end{description}
+	\item[TT\_PREPARE] is written as: \\ \ \verb!PrepareToCall [param_count(quad->operand1)]!, e.g: \verb!PrepareToCall 5!
+	\item[TT\_BEGIN\_FN] is written as: \\ \ \verb!BeginFn [correct_string_rep(quad->operand1)]!, e.g: \verb!BeginFn main!
+	\item[TT\_FN\_BODY] is written as: \\ \ \verb!FnBody!
+	\item[TT\_END\_FN] is written as: \\ \ \verb!EndFn!
+\end{description}
+\ \\
+Three functions mentioned above are: \verb!to_string!, \verb!correct_string_rep! and \verb!param_count!. The \verb!to_string! function takes any \verb!value! structure of type \verb!VT_STRING! and writes out the underlying string representation. \verb!correct_string_rep! is a more intelligent version of \verb!to_string! and can handle printing \verb!value!s of any given value type. If the value is an integer, \verb!correct_string_rep! will convert this to a string for us, it can print \verb!VT_STRING!s directly, temporary names are written out rather than their values, function pointers are also resolved to function names and returned as strings. The final function \verb!param_count! takes a look at a function definition (given a reference to one in an environment) and returns the size of the formal parameter list stored within the function definition.
+
+\begin{figure}[p]
+	\begin{verbatim}
+		/** 
+		 * Please note the indentation/spacing/comments below are NOT present in the
+		 * generated TAC, but are introduced here to improve legibility
+		 **/
+
+		/* cplus function */
+		
+		BeginFn cplus
+		_cplus:
+		InitFrame 2
+		PopParam a
+		FnBody
+		
+		   /* Inner function cplusa */
+		   BeginFn cplusa
+		   _cplusa:
+		   InitFrame 2
+		   PopParam b
+		   FnBody
+		      _t1 = a + b
+		      Return _t1
+		   EndFn
+		
+		Return cplusa
+		EndFn
+		
+		/* Main function */
+		
+		BeginFn main
+		_main:
+		InitFrame 4
+		FnBody
+		   PrepareToCall 1
+		   PushParam 5
+		   _t2 = CallFn _cplus
+		   z = _t2
+		   PrepareToCall 1
+		   PushParam 9
+		   _t3 = CallFn _z
+		   Return _t3
+		EndFn
+
+		
+	\end{verbatim}
+	\caption{Printed TAC output}
+	\label{fig:printedtac}
+\end{figure}
+
+\subsection{Machine Independent Optimisation (MIO)}
+\label{sec:MIO}
+Intermediate representation is an ideal place to do various forms of optimisation. Once the translation into TAC is complete, it is easy to spot redundant instructions. Unfortunately no time was available to start implementing any form of optimisation of TAC instructions. Consideration to possible optimisation schemes will be given in the Further Improvements section. The TAC has been written with optimisation in mind and it would be fairly trivial to add at a later stage.
+
+\subsection{State of the TAC Generator}
+The TAC generator is perhaps a slightly smaller part of this project than was intended by the coursework specification. It \textbf{is} a module in its own right and can be run independently of the code generator. However, it requires input from the parser to function. Unfortunately there was no time to implement a separate TAC parser, although this will be discussed in the Critical Evaluation section in further detail.
+\\ \ \\ \
+Functionally, the TAC generator is not \emph{as} complete as the interpreter, but it is still able to execute almost all of the examples as intended. One area that is lacking is the creation of new environments within \verb!IF! and \verb!WHILE! statements. This means that the behaviour when redefining an existing variable has not been rigorously tested and is likely to break.
+\\ \ \\ \
+Additionally as mentioned in the section on Machine Independent Optimisation (section \ref{sec:MIO}), there was simply no time to investigate various optimisations that could have been put to use. This, again, is covered in further detail in the Further Improvements section.
+\\ \ \\ \
+Some of the TAC instructions that were developed were also not used in the MIPS generation stage. This forms part of the Critical Evaluation section later in the document.
