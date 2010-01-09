@@ -137,8 +137,8 @@ Although this language has now been completely specified, there are still some c
 \begin{figure}[p]
 	\begin{verbatim}
 		int a = 15;
-		a = a - 12; /* --C parser will not allow */
-		            /* TAC does allow such statements */
+		a = a - 12; /* << --C parser will not allow this outside of a function body */
+		            /* TAC syntax allows such statements outside + inside functions */
 		int main() {
 			return a;
 		}
