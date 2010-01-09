@@ -49,12 +49,20 @@ Another implication has already been touched upon. We mentioned the fact that th
 Like TAC is stored internally in \verb!tac_quad! structures, MIPS instructions are held in a \verb!mips_instruction! structure. A few other structures are used for different types of instruction operands. The relevant structures can be examined in figure \ref{fig:mipsinstr}. Like the \verb!tac_quad! structures, the code is built up as a linked list, before being printed by a special \verb!print_mips! routine.
 
 \subsection{Code Generation Procedure}
-At the start of the code generation procedure,
+At the start of the code generation procedure, a special \verb!mips_instruction! is output from \verb!codegen_utils.c! that writes the \verb!.text! and \verb!.data! segments into the output. A special constant \verb!EOL! is defined as an end of line character, for when the program's result will eventually be printed. Next, the register descriptor variable \verb!regs! is initialised. The parse tree is then passed to the TAC generator. After the TAC has been produced, the linked list of TAC is traversed once and nesting level are written into the \verb!level! member of each \verb!tac_quad!. Having numbered the nesting levels, \verb!linked_sort! performs a linked-list bubble sort on the generated TAC using the level member as the sort criterion. This sort ensures that all nested functions are moved to the outermost level as there is no concept of function nesting in MIPS code.
+\ \\ \ \\
+
+
+% Nested functions with the same name will not work - MIPS 
+
+
 
 \subsection{Optimisation}
 % Zero Register Substitution
 % Function variable helper sub is not written out if not needed by program
 % Optimisation.C
+
+\subsection{State of the MIPS Assembler Compiler}
 
 \begin{figure}[p]
 	\begin{verbatim}
