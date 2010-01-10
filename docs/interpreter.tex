@@ -41,7 +41,7 @@ The \verb!evaluate! function is now called recursively starting from the entry p
 After traversing the AST, the \verb!main! function should have a valid integer return value (unless no \verb!RETURN! statement was present). This value is simply printed to standard out and the interpreter finishes.
 
 \subsection{State of the Interpreter}
-Within the limited time that we had for the whole project and the testing completed as part of this, the interpreter is seemingly complete. It is capable of executing all of the example scripts that I have created and there are no significant faults that I know of. There are two known faults that can be mentioned briefly.
+Within the limited time that was allocated for the project and the testing completed as part of this, the interpreter is seemingly complete. It is capable of executing all of the example scripts that were created and there are no significant known faults. There are two small minor issues that can be mentioned briefly.
 \begin{itemize}
 	\item One thing that does not work in the interpreter, but parses correctly: Functions without parameters that use the keyword \verb!void! to denote no parameters: \verb!int my_parameterless_fn(void)!.
 	\item Return values are type-checked, but no effort is made to detect functions that do not return a value, when they should.
