@@ -72,18 +72,31 @@ After the TAC is ready to iterate over, a special \verb!mips_instruction! is out
 	If a function is being called through the use of a function typed variable, this procedure is slightly more complicated (please read section \ref{sec:ftv} for some background information). The function descriptor address has to be loaded to have enough information in order to execute the function. The function descriptor address is stored as the value for a function typed variable, when the variable is first declared. In order to lookup the descriptor, we load the value for the function typed variable into the first available register. The stored value is the address of the function descriptor. Once we have the function descriptor, it is trivial to find the entry point and static link. The entry point is stored in the first word from the base descriptor address and the static link is stored in the second. The function entry point is loaded into another register and the static link is loaded into \$v0. As with normal function calls, the dynamic link is saved into \$a1. The function is then called using the address that was found within the function descriptor. After the function returns, its return value (if applicable) is moved from \$v0 into the allocated result register.
 \end{description}
 
+After the code generation has taken place, a few extra pieces of code are appended:
+\begin{description}
+	\item[mk\_ar] The definition of \verb!mk_ar! is appended into the linked list of code. This code is required so that activation records can be created upon function entry.
+	\item[rfunc] A global variable \verb!has_used_fn_variable! is set to $1$ whenever a function typed variable is used. If this is flag is $1$ after code generation is complete, then the definition for the \verb!rfunc! function is added to the end of the assembly code. This code is necessary to create function descriptors.
+	\item[main] In order to execute an assembly program, like in C, we must define a \verb!main! function. This \verb!main! function is provided by our compiler. The \verb!main! function stores zero in both \$a1 and \$v0. These registers are zeroed out because there is no static or dynamic link at the start of execution because no activation records have been created yet. The user defined \verb!main! function, now residing in \verb!_main!, is called. Once the return value is accessible, three MIPS \verb!syscall!s occur. The first of these copies the return value into \$a0 and performs \verb!syscall! type 1. This operation causes the return value to be printed out. The second \verb!syscall! prints the \verb!EOL! character that we defined right at the start of the assembly program. Finally, the last \verb!syscall! instructs the processor that the program has terminated.
+\end{description}
+\ \\
+After all the code has been generated, some basic optimisations on the code are performed - these are detailed in section \ref{sec:opt}
+\ \\ \ \\
+Finally, the code is printed to standard out using \verb!print_mips!. The \verb!print_mips! function simply walks down the linked list and prints the operation name, for example \verb!add!. Then each of the operands for the instruction are examined. If the operand is set to a sensible value then it is printed. If the operand is an offset operand, then it is printed: \verb!offset_amount($register)!, register names can simply be printed as are constants. Function labels are printed as labels but prefixed with an underscore.
+\ \\ \ \\
+Most operations that occur in the code generation stage are given internal comments that describe what the operation does. If a debug version of the compiler is run then these comments are outputted by \verb!print_mips!. These comments are not present in the release binaries. The behaviour can be changed by modifying the value of \verb!DEBUG_ON! in \verb!environment.h!.
+
 \subsection{Function Typed Variables}
 \label{sec:ftv}
 In order to facilitate the use of function typed variables, at runtime we must be able look up not just the start address of the function (as we can for labels), but also the correct static link. By the time we come to invoke the function, we have lost any information about the context in which the function was originally defined. To remedy this, each time a function typed variable is \textbf{created}, a call is made to another helper routine that is appended into the generated assembly: \verb!rfunc!. \verb!rfunc! takes a reference to the function entry point in register \$v0 and the correct static link in \$v1. 8 bytes of memory is allocated in the heap to store this pair within \verb!rfunc!. The address to this function descriptor is returned in \$v0. As a small optimisation, the \verb!rfunc! function is not appended to our assembly file if no function typed variables are used within the user's program.
 \ \\ \ \\
 When the function is invoked, the function descriptor is consulted in order to deduce which static link should be used.
 
-
 \subsection{Traversing Static Links}
 \label{sec:staticlinks}
 The logic behind traversing static links was something else that had to be researched extensively. 
 
 \subsection{Optimisation}
+\label{sec:opt}
 % Zero Register Substitution
 % Function variable helper sub is not written out if not needed by program
 % Optimisation.C
