@@ -63,6 +63,10 @@ After the TAC is ready to iterate over, a special \verb!mips_instruction! is out
 	\item[TT\_IF] Due to the way conditions are handled in the TAC instruction set, the handling of the \verb!IF! statement during the code generation stage is very simple, as the condition will have already been reduced to an integer. The condition value is loaded into a register using the \verb!get_register! function. As a result, a \verb!bne! (\emph{Branch not equal}) statement is sufficient to perform the branch.
 	\item[TT\_FN\_CALL] 
 	\item[TT\_RETURN]
+		\begin{description}
+			\item[With return value] If the operand1 member of the \verb!tac_quad! is set then a value is being returned.
+			\item[Without a return value] If the operand1 member of the \verb!tac_quad! is \verb!NULL! then no return value is returned. Before returning, any \$t registers that have been used are saved. The \verb!clear_regs! function is used to clear out our register descriptors. The previously saved return address is popped from the stack and restored into \$ra. The previous frame pointer is also restored so that the procedure that we return to, can find its variables using the correct offsets. Finally, we restore the previously saved static link (\$s0) and jump back to the address in \$ra.
+		\end{description}
 \end{description}
 
 % Nested functions with the same name will not work - MIPS 
