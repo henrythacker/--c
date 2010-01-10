@@ -118,7 +118,7 @@ In \verb!optimisation.c!, three additional basic optimisations are included as f
 	\item[remove\_redundant\_sp\_move] When values are pushed / popped from the stack, the stack pointer is adjusted accordingly. If a function call occurs right at the top of the function body, after all of the parameters have just been popped, quite often a \verb!add $sp, $sp, 4! will be followed directly with a \verb!sub $sp, $sp 4!. This optimisation removes both of these instructions where they occur in pairs.
 \end{description}
 \ \\
-These optimisations, while simple, do reduce the size of the generated assembly program fairly significantly. Additionally, these examples are there to show that optimisation has been considered and is possible. With a bit more thought, these ideas could be extended to complicated optimisation strategies. The code that is produced is still fairly sub-optimal in places, but it is functional.
+These optimisations, while simple, do work well to reduce the size of the generated assembly program. Additionally, these examples are there to show that optimisation has been considered and is possible. With a bit more thought, these ideas could be extended to complicated optimisation strategies. The code that is produced is still fairly sub-optimal in places, but it is functional.
 
 \subsection{State of the MIPS Assembler Compiler}
 \label{sec:stateMIPS}
