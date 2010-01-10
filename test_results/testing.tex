@@ -1,5 +1,9 @@
 \chapter{Testing}
-\section{Test Results}
+
+\section{Summary}
+The interpreter and TAC generator were able to cope with all of the test cases that were given. The code generator was not able to work with the \verb!innertest.c! and \verb!voidfn.c! examples. The \verb!voidfn.c! example does not work because it uses global variables. The \verb!innertest.c! example does not work because the inner functions both have the same name.
+
+\section{Test Cases}
 \input{../test_results/bigmath.c.tex}\newpage
 \input{../test_results/cplusa.c.tex}\newpage
 \input{../test_results/factorial.c.tex}\newpage
