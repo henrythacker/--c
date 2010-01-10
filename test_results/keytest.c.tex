@@ -1,6 +1,6 @@
-\section{Test 11}
-\subsection{Input File}
-\begin{verbatim}
+\subsection{Test 11 - keytest.c}
+\subsubsection{Input File}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 /*Result: 83*/
 
 /*
@@ -24,25 +24,15 @@ int main() {
 		return test();
 	}
 	return my_func();
-}\end{verbatim}\subsection{Purpose of Test}
+}
+\end{lstlisting}\subsubsection{Purpose of Test}
 
-\subsection{Expected Result}
-The expected result for this test is Result: 83
-\subsection{Interpreter Result}
-The result from the interpreter is 83
-\subsection{Generated TAC}
-\begin{verbatim}
-Environment: 0x100100fa0
-Static link via: 0x100100c60 [Nested 1 levels deep]
-[97]:
-	int - identifier: a, value: 5 - var_number: 0
-[98]:
-	int - identifier: b, value: 9 - var_number: 1
-[627]:
-	func - identifier: my_func, entry-point: 0x100100b20, returns: integer, definition-env: 0x100100fa0, params: 0
- - var_number: 2
-[648]:
-	temporary - identifier: _t8 - var_number: 3
+\subsubsection{Expected Result}
+The expected output for this test $=$ Result: 83
+\subsubsection{Interpreter Result}
+The result from the interpreter is: 83
+\subsubsection{Generated TAC}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 BeginFn main
 _main:
 InitFrame 4
@@ -83,10 +73,11 @@ PrepareToCall 0
 _t8 = CallFn _my_func
 Return _t8
 EndFn
-\end{verbatim}\subsection{Generated MIPS Assembly}
+
+\end{lstlisting}\subsubsection{Generated MIPS Assembly}
 \begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
          
-# Sun Jan 10 13:55:19 2010
+# Sun Jan 10 14:14:56 2010
 
 .data
 	EOL:	.asciiz "\n"
@@ -234,7 +225,7 @@ main:
 	li $v0, 10	# System exit
 	syscall
 
-\end{lstlisting}\subsection{SPIM Output}
+\end{lstlisting}\subsubsection{SPIM Output}
 \begin{verbatim}
 SPIM Version 7.4 of January 1, 2009
 Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
@@ -242,5 +233,5 @@ All Rights Reserved.
 See the file README for a full copyright notice.
 Loaded: /opt/local/share/spim/exceptions.s
 83
-\end{verbatim}\subsection{Test Analysis}
+\end{verbatim}\subsubsection{Test Analysis}
 

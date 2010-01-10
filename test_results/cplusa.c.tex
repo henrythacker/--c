@@ -1,6 +1,6 @@
-\section{Test 2}
-\subsection{Input File}
-\begin{verbatim}
+\subsection{Test 2 - cplusa.c}
+\subsubsection{Input File}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 /*Result: 14*/
 
 /*
@@ -18,25 +18,15 @@ function cplus(int a) {
 int main() {
 	function z = cplus(5);
 	return z(9);
-}\end{verbatim}\subsection{Purpose of Test}
+}
+\end{lstlisting}\subsubsection{Purpose of Test}
 
-\subsection{Expected Result}
-The expected result for this test is Result: 14
-\subsection{Interpreter Result}
-The result from the interpreter is 14
-\subsection{Generated TAC}
-\begin{verbatim}
-Environment: 0x100101a80
-Static link via: 0x1001007a0 [Nested 1 levels deep]
-[122]:
-	func - identifier: z, entry-point: 0x0, returns: unknown, definition-env: 0x0, params: 0
- - var_number: 0
-	func - identifier: z, entry-point: 0x0, returns: unknown, definition-env: 0x0, params: 0
- - var_number: 0
-[642]:
-	temporary - identifier: _t2 - var_number: 1
-[643]:
-	temporary - identifier: _t3 - var_number: 2
+\subsubsection{Expected Result}
+The expected output for this test $=$ Result: 14
+\subsubsection{Interpreter Result}
+The result from the interpreter is: 14
+\subsubsection{Generated TAC}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 BeginFn cplus
 _cplus:
 InitFrame 2
@@ -65,10 +55,11 @@ PushParam 9
 _t3 = CallFn _z
 Return _t3
 EndFn
-\end{verbatim}\subsection{Generated MIPS Assembly}
+
+\end{lstlisting}\subsubsection{Generated MIPS Assembly}
 \begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
          
-# Sun Jan 10 13:55:19 2010
+# Sun Jan 10 14:14:55 2010
 
 .data
 	EOL:	.asciiz "\n"
@@ -183,7 +174,7 @@ main:
 	li $v0, 10	# System exit
 	syscall
 
-\end{lstlisting}\subsection{SPIM Output}
+\end{lstlisting}\subsubsection{SPIM Output}
 \begin{verbatim}
 SPIM Version 7.4 of January 1, 2009
 Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
@@ -191,5 +182,5 @@ All Rights Reserved.
 See the file README for a full copyright notice.
 Loaded: /opt/local/share/spim/exceptions.s
 14
-\end{verbatim}\subsection{Test Analysis}
+\end{verbatim}\subsubsection{Test Analysis}
 

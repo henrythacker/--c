@@ -1,6 +1,6 @@
-\section{Test 19}
-\subsection{Input File}
-\begin{verbatim}
+\subsection{Test 19 - twice.c}
+\subsubsection{Input File}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 /*Result: 7*/
 
 /*
@@ -20,25 +20,15 @@ int add(int a) {
 int main() {
 	function twicea = twice(add);
 	return twicea(5);
-}\end{verbatim}\subsection{Purpose of Test}
+}
+\end{lstlisting}\subsubsection{Purpose of Test}
 
-\subsection{Expected Result}
-The expected result for this test is Result: 7
-\subsection{Interpreter Result}
-The result from the interpreter is 7
-\subsection{Generated TAC}
-\begin{verbatim}
-Environment: 0x100102890
-Static link via: 0x1001009e0 [Nested 1 levels deep]
-[545]:
-	func - identifier: twicea, entry-point: 0x0, returns: unknown, definition-env: 0x0, params: 0
- - var_number: 0
-	func - identifier: twicea, entry-point: 0x0, returns: unknown, definition-env: 0x0, params: 0
- - var_number: 0
-[644]:
-	temporary - identifier: _t4 - var_number: 1
-[645]:
-	temporary - identifier: _t5 - var_number: 2
+\subsubsection{Expected Result}
+The expected output for this test $=$ Result: 7
+\subsubsection{Interpreter Result}
+The result from the interpreter is: 7
+\subsubsection{Generated TAC}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 BeginFn twice
 _twice:
 InitFrame 2
@@ -80,10 +70,11 @@ PushParam 5
 _t5 = CallFn _twicea
 Return _t5
 EndFn
-\end{verbatim}\subsection{Generated MIPS Assembly}
+
+\end{lstlisting}\subsubsection{Generated MIPS Assembly}
 \begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
          
-# Sun Jan 10 13:55:19 2010
+# Sun Jan 10 14:14:56 2010
 
 .data
 	EOL:	.asciiz "\n"
@@ -236,7 +227,7 @@ main:
 	li $v0, 10	# System exit
 	syscall
 
-\end{lstlisting}\subsection{SPIM Output}
+\end{lstlisting}\subsubsection{SPIM Output}
 \begin{verbatim}
 SPIM Version 7.4 of January 1, 2009
 Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
@@ -244,5 +235,5 @@ All Rights Reserved.
 See the file README for a full copyright notice.
 Loaded: /opt/local/share/spim/exceptions.s
 7
-\end{verbatim}\subsection{Test Analysis}
+\end{verbatim}\subsubsection{Test Analysis}
 

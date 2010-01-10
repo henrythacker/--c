@@ -1,6 +1,6 @@
-\section{Test 13}
-\subsection{Input File}
-\begin{verbatim}
+\subsection{Test 13 - lte.c}
+\subsubsection{Input File}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 /*Result: 1*/
 
 /*
@@ -17,18 +17,15 @@ int main() {
 	}
 	/* Should never get here */
 	return 0;
-}\end{verbatim}\subsection{Purpose of Test}
+}
+\end{lstlisting}\subsubsection{Purpose of Test}
 
-\subsection{Expected Result}
-The expected result for this test is Result: 1
-\subsection{Interpreter Result}
-The result from the interpreter is 1
-\subsection{Generated TAC}
-\begin{verbatim}
-Environment: 0x100100750
-Static link via: 0x100100410 [Nested 1 levels deep]
-[641]:
-	temporary - identifier: _t1 - var_number: 0
+\subsubsection{Expected Result}
+The expected output for this test $=$ Result: 1
+\subsubsection{Interpreter Result}
+The result from the interpreter is: 1
+\subsubsection{Generated TAC}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 BeginFn main
 _main:
 InitFrame 1
@@ -42,10 +39,11 @@ Return 1
 __if1end:
 Return 0
 EndFn
-\end{verbatim}\subsection{Generated MIPS Assembly}
+
+\end{lstlisting}\subsubsection{Generated MIPS Assembly}
 \begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
          
-# Sun Jan 10 13:55:19 2010
+# Sun Jan 10 14:14:56 2010
 
 .data
 	EOL:	.asciiz "\n"
@@ -112,7 +110,7 @@ main:
 	li $v0, 10	# System exit
 	syscall
 
-\end{lstlisting}\subsection{SPIM Output}
+\end{lstlisting}\subsubsection{SPIM Output}
 \begin{verbatim}
 SPIM Version 7.4 of January 1, 2009
 Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
@@ -120,5 +118,5 @@ All Rights Reserved.
 See the file README for a full copyright notice.
 Loaded: /opt/local/share/spim/exceptions.s
 1
-\end{verbatim}\subsection{Test Analysis}
+\end{verbatim}\subsubsection{Test Analysis}
 

@@ -1,6 +1,6 @@
-\section{Test 4}
-\subsection{Input File}
-\begin{verbatim}
+\subsection{Test 4 - fibonacci.c}
+\subsubsection{Input File}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 /*Result: 34*/
 
 /*
@@ -18,18 +18,15 @@ int fib(int n) {
 /* Main entry point */
 int main() {
 	return fib(9);
-}\end{verbatim}\subsection{Purpose of Test}
+}
+\end{lstlisting}\subsubsection{Purpose of Test}
 
-\subsection{Expected Result}
-The expected result for this test is Result: 34
-\subsection{Interpreter Result}
-The result from the interpreter is 34
-\subsection{Generated TAC}
-\begin{verbatim}
-Environment: 0x100101ef0
-Static link via: 0x1001006d0 [Nested 1 levels deep]
-[647]:
-	temporary - identifier: _t7 - var_number: 0
+\subsubsection{Expected Result}
+The expected output for this test $=$ Result: 34
+\subsubsection{Interpreter Result}
+The result from the interpreter is: 34
+\subsubsection{Generated TAC}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 BeginFn fib
 _fib:
 InitFrame 7
@@ -61,10 +58,11 @@ PushParam 9
 _t7 = CallFn _fib
 Return _t7
 EndFn
-\end{verbatim}\subsection{Generated MIPS Assembly}
+
+\end{lstlisting}\subsubsection{Generated MIPS Assembly}
 \begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
          
-# Sun Jan 10 13:55:19 2010
+# Sun Jan 10 14:14:55 2010
 
 .data
 	EOL:	.asciiz "\n"
@@ -174,7 +172,7 @@ main:
 	li $v0, 10	# System exit
 	syscall
 
-\end{lstlisting}\subsection{SPIM Output}
+\end{lstlisting}\subsubsection{SPIM Output}
 \begin{verbatim}
 SPIM Version 7.4 of January 1, 2009
 Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
@@ -182,5 +180,5 @@ All Rights Reserved.
 See the file README for a full copyright notice.
 Loaded: /opt/local/share/spim/exceptions.s
 34
-\end{verbatim}\subsection{Test Analysis}
+\end{verbatim}\subsubsection{Test Analysis}
 

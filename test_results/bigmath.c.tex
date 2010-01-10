@@ -1,6 +1,6 @@
-\section{Test 1}
-\subsection{Input File}
-\begin{verbatim}
+\subsection{Test 1 - bigmath.c}
+\subsubsection{Input File}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 /*Result: 2034*/
 
 
@@ -18,48 +18,15 @@ int main() {
 	int h = 442;
 	g = 12;
 	return a + b + c + d + e + f + g + (2 * h); 
-}\end{verbatim}\subsection{Purpose of Test}
+}
+\end{lstlisting}\subsubsection{Purpose of Test}
 
-\subsection{Expected Result}
-The expected result for this test is Result: 2034
-\subsection{Interpreter Result}
-The result from the interpreter is 2034
-\subsection{Generated TAC}
-\begin{verbatim}
-Environment: 0x100100fd0
-Static link via: 0x100100c90 [Nested 1 levels deep]
-[97]:
-	int - identifier: a, value: 5 - var_number: 0
-[98]:
-	int - identifier: b, value: 10 - var_number: 1
-[99]:
-	int - identifier: c, value: 929 - var_number: 2
-[100]:
-	int - identifier: d, value: 32 - var_number: 3
-[101]:
-	int - identifier: e, value: 90 - var_number: 5
-[102]:
-	int - identifier: f, value: 72 - var_number: 6
-[103]:
-	int - identifier: g, value: 12 - var_number: 4
-[104]:
-	int - identifier: h, value: 442 - var_number: 7
-[641]:
-	temporary - identifier: _t1 - var_number: 8
-[642]:
-	temporary - identifier: _t2 - var_number: 9
-[643]:
-	temporary - identifier: _t3 - var_number: 10
-[644]:
-	temporary - identifier: _t4 - var_number: 11
-[645]:
-	temporary - identifier: _t5 - var_number: 12
-[646]:
-	temporary - identifier: _t6 - var_number: 13
-[647]:
-	temporary - identifier: _t7 - var_number: 14
-[648]:
-	temporary - identifier: _t8 - var_number: 15
+\subsubsection{Expected Result}
+The expected output for this test $=$ Result: 2034
+\subsubsection{Interpreter Result}
+The result from the interpreter is: 2034
+\subsubsection{Generated TAC}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 BeginFn main
 _main:
 InitFrame 16
@@ -82,10 +49,11 @@ _t8 = 2 * h
 _t1 = _t2 + _t8
 Return _t1
 EndFn
-\end{verbatim}\subsection{Generated MIPS Assembly}
+
+\end{lstlisting}\subsubsection{Generated MIPS Assembly}
 \begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
          
-# Sun Jan 10 13:55:19 2010
+# Sun Jan 10 14:14:55 2010
 
 .data
 	EOL:	.asciiz "\n"
@@ -179,7 +147,7 @@ main:
 	li $v0, 10	# System exit
 	syscall
 
-\end{lstlisting}\subsection{SPIM Output}
+\end{lstlisting}\subsubsection{SPIM Output}
 \begin{verbatim}
 SPIM Version 7.4 of January 1, 2009
 Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
@@ -187,5 +155,5 @@ All Rights Reserved.
 See the file README for a full copyright notice.
 Loaded: /opt/local/share/spim/exceptions.s
 2034
-\end{verbatim}\subsection{Test Analysis}
+\end{verbatim}\subsubsection{Test Analysis}
 

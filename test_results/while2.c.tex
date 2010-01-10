@@ -1,6 +1,6 @@
-\section{Test 22}
-\subsection{Input File}
-\begin{verbatim}
+\subsection{Test 22 - while2.c}
+\subsubsection{Input File}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 /*Result: 3*/
 
 /*
@@ -19,24 +19,15 @@ int main() {
 		return i;
 	}
 	return 5;
-}\end{verbatim}\subsection{Purpose of Test}
+}
+\end{lstlisting}\subsubsection{Purpose of Test}
 
-\subsection{Expected Result}
-The expected result for this test is Result: 3
-\subsection{Interpreter Result}
-The result from the interpreter is 3
-\subsection{Generated TAC}
-\begin{verbatim}
-Environment: 0x100100960
-Static link via: 0x100100620 [Nested 1 levels deep]
-[105]:
-	int - identifier: i, value: 0 - var_number: 0
-[641]:
-	temporary - identifier: _t1 - var_number: 1
-[642]:
-	temporary - identifier: _t2 - var_number: 2
-[643]:
-	temporary - identifier: _t3 - var_number: 3
+\subsubsection{Expected Result}
+The expected output for this test $=$ Result: 3
+\subsubsection{Interpreter Result}
+The result from the interpreter is: 3
+\subsubsection{Generated TAC}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 BeginFn main
 _main:
 InitFrame 4
@@ -61,10 +52,11 @@ __if1end:
 __while1end:
 Return 5
 EndFn
-\end{verbatim}\subsection{Generated MIPS Assembly}
+
+\end{lstlisting}\subsubsection{Generated MIPS Assembly}
 \begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
          
-# Sun Jan 10 13:55:19 2010
+# Sun Jan 10 14:14:57 2010
 
 .data
 	EOL:	.asciiz "\n"
@@ -141,7 +133,7 @@ main:
 	li $v0, 10	# System exit
 	syscall
 
-\end{lstlisting}\subsection{SPIM Output}
+\end{lstlisting}\subsubsection{SPIM Output}
 \begin{verbatim}
 SPIM Version 7.4 of January 1, 2009
 Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
@@ -149,5 +141,5 @@ All Rights Reserved.
 See the file README for a full copyright notice.
 Loaded: /opt/local/share/spim/exceptions.s
 3
-\end{verbatim}\subsection{Test Analysis}
+\end{verbatim}\subsubsection{Test Analysis}
 

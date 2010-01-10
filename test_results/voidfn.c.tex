@@ -1,6 +1,6 @@
-\section{Test 20}
-\subsection{Input File}
-\begin{verbatim}
+\subsection{Test 20 - voidfn.c}
+\subsubsection{Input File}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 /*Result: 5*/
 
 /*
@@ -17,18 +17,15 @@ void fn() {
 int main() {
 	fn();
 	return a;
-}\end{verbatim}\subsection{Purpose of Test}
+}
+\end{lstlisting}\subsubsection{Purpose of Test}
 
-\subsection{Expected Result}
-The expected result for this test is Result: 5
-\subsection{Interpreter Result}
-The result from the interpreter is 5
-\subsection{Generated TAC}
-\begin{verbatim}
-Environment: 0x1001010c0
-Static link via: 0x100100510 [Nested 1 levels deep]
-[641]:
-	temporary - identifier: _t1 - var_number: 0
+\subsubsection{Expected Result}
+The expected output for this test $=$ Result: 5
+\subsubsection{Interpreter Result}
+The result from the interpreter is: 5
+\subsubsection{Generated TAC}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
 a = 1
 BeginFn fn
 _fn:
@@ -44,11 +41,12 @@ PrepareToCall 0
 _t1 = CallFn _fn
 Return a
 EndFn
-\end{verbatim}\subsection{Generated MIPS Assembly}
+
+\end{lstlisting}\subsubsection{Generated MIPS Assembly}
 \begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
          
 Can not be compiled
-\end{lstlisting}\subsection{SPIM Output}
+\end{lstlisting}\subsubsection{SPIM Output}
 \begin{verbatim}
 SPIM Version 7.4 of January 1, 2009
 Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
@@ -59,5 +57,5 @@ The following symbols are undefined:
 main
 
 [0x00400014]	0x0c000000  jal 0x00000000 [main]           ; 180: jal main
-\end{verbatim}\subsection{Test Analysis}
+\end{verbatim}\subsubsection{Test Analysis}
 
