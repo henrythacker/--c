@@ -109,9 +109,16 @@ These rules are encoded in the \verb!cg_load_static_link! function within \verb!
 
 \subsection{Optimisation}
 \label{sec:opt}
-% Zero Register Substitution
-% Function variable helper sub is not written out if not needed by program
-% Optimisation.C
+During the code generation a few \textbf{basic} optimisations are carried out. The first very simple optimisation is wherever a 0 zero constant is used, instead of writing it into a register, we substitute the provided \$zero register instead. Additionally, to reduce the size of the assembly program, \verb!rfunc! is not added to the program unless function typed variables are used.
+\ \\ \ \\
+In \verb!optimisation.c!, three additional basic optimisations are included as follows:
+\begin{description}
+	\item[remove\_after\_return] This optimisation scans over all the generated \verb!mips_instruction!s looking for a return (\verb!jr!) or unconditional jump statement (\verb!j!). All unreachable lines of code after this, up until the next: label, function label or comment are removed. To remove the code, the pointer within the linked list are altered to bypass the redundant instructions.
+	\item[remove\_redundant\_move] Due to an inefficiency in the code generation phase, the MIPS instruction \verb!move $X, $v0! is often followed by \verb!move $v0, $X!. The second \verb!move! is completely redundant. This optimisation removes the second \verb!move! instruction by altering the pointers to circumvent it.
+	\item[remove\_redundant\_sp\_move] When values are pushed / popped from the stack, the stack pointer is adjusted accordingly. If a function call occurs right at the top of the function body, after all of the parameters have just been popped, quite often a \verb!add $sp, $sp, 4! will be followed directly with a \verb!sub $sp, $sp 4!. This optimisation removes both of these instructions where they occur in pairs.
+\end{description}
+
+These optimisations, while simple, do reduce the size of the generated assembly program fairly significantly. Additionally, these examples are there to show that optimisation has been considered and is possible. With a bit more thought, these ideas could be extended to complicated optimisation strategies. The code that is produced is still fairly sub-optimal in places, but it is functional.
 
 \subsection{State of the MIPS Assembler Compiler}
 % Nested functions with the same name will not work - MIPS 
