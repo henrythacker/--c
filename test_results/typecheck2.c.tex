@@ -19,7 +19,7 @@ int main() {
 	return myfn(5);
 }
 \end{lstlisting}\subsubsection{Purpose of Test}
-This example is supposed to cause a failure in the interpreter. The test should cause failures in the interpreter and TAC generator. As a result, no MIPS assembly code should be generated.
+This example is supposed to cause a type check failure in both the interpreter and the TAC generator. As a result, no MIPS assembly code should be generated.
 \subsubsection{Expected Result}
 The expected output for this test $=$ Typecheck failure
 \subsubsection{Interpreter Result}
@@ -47,5 +47,5 @@ main
 \begin{description}
 	\item[Interpreter] The interpreter gave the expected result - \verb!myfn! was expected to return an integer not a function pointer, so the interpreter fails for this input.
 	\item[TAC] Unlike parameters, the TAC generator happily type-checks return values, so the TAC representation is never generated as the typing error is detected.
-	\item[MIPS] As no TAC representation is generated, we can't generate any MIPS code to run in SPIM!
+	\item[MIPS] As no TAC representation is generated, we can't generate any MIPS code to run in SPIM.
 \end{description}
