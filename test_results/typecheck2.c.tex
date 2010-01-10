@@ -1,0 +1,51 @@
+\subsection{Test 2 - typecheck2.c}
+\subsubsection{Input File}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
+/*Result: FAIL*/
+
+/*
+*	Sample --C Type checking #2
+*	This example should FAIL
+*
+*	Henry Thacker
+*/
+
+int myfn(int a) {
+	return myfn;
+}
+
+
+int main() {
+	return myfn(5);
+}
+\end{lstlisting}\subsubsection{Purpose of Test}
+This example is supposed to cause a failure in the interpreter. The test should cause failures in the interpreter and TAC generator. As a result, no MIPS assembly code should be generated.
+\subsubsection{Expected Result}
+The expected output for this test $=$ Typecheck failure
+\subsubsection{Interpreter Result}
+The result from the interpreter is: Could not be interpreted
+\subsubsection{Generated TAC}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
+Fatal exception: Expected integer return value
+
+\end{lstlisting}\subsubsection{Generated MIPS Assembly}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
+Can not be compiled
+\end{lstlisting}\subsubsection{SPIM Output}
+\begin{verbatim}
+SPIM Version 7.4 of January 1, 2009
+Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
+All Rights Reserved.
+See the file README for a full copyright notice.
+Loaded: /opt/local/share/spim/exceptions.s
+The following symbols are undefined:
+main
+
+[0x00400014]	0x0c000000  jal 0x00000000 [main]           ; 180: jal main
+\end{verbatim}
+\subsubsection{Test Analysis}
+\begin{description}
+	\item[Interpreter] The interpreter gave the expected result - \verb!myfn! was expected to return an integer not a function pointer, so the interpreter fails for this input.
+	\item[TAC] Unlike parameters, the TAC generator happily type-checks return values, so the TAC representation is never generated as the typing error is detected.
+	\item[MIPS] As no TAC representation is generated, we can't generate any MIPS code to run in SPIM!
+\end{description}

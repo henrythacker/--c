@@ -1,7 +1,9 @@
 \chapter{Testing}
 
 \section{Summary}
-The interpreter and TAC generator were able to cope with all of the test cases that were given. The code generator was not able to work with the \verb!innertest.c! and \verb!voidfn.c! examples. The \verb!voidfn.c! example does not work because it uses global variables. The \verb!innertest.c! example does not work because the inner functions both have the same name.
+The interpreter and TAC generator were able to cope with all of the test cases that were given (except the expected failure cases). The code generator was not able to work with the \verb!innertest.c! and \verb!voidfn.c! examples. The \verb!voidfn.c! example does not work because it uses global variables. The \verb!innertest.c! example does not work because the inner functions both have the same name.
+\ \\ \ \\
+The \verb!typecheck1.c! and \verb!typecheck2.c! files are both designed to fail, as they both contain intentional typing problems. Unfortunately the TAC generator is not able to type check parameters, so invalid TAC and MIPS code is generated for the \verb!typecheck1.c! example.
 
 \section{Test Cases}
 \input{../test_results/bigmath.c.tex}\newpage
@@ -23,6 +25,8 @@ The interpreter and TAC generator were able to cope with all of the test cases t
 \input{../test_results/simple.c.tex}\newpage
 \input{../test_results/simpleinner.c.tex}\newpage
 \input{../test_results/twice.c.tex}\newpage
+\input{../test_results/typecheck1.c.tex}\newpage
+\input{../test_results/typecheck2.c.tex}\newpage
 \input{../test_results/voidfn.c.tex}\newpage
 \input{../test_results/while.c.tex}\newpage
 \input{../test_results/while2.c.tex}\newpage

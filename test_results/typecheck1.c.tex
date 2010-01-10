@@ -1,0 +1,150 @@
+\subsection{Test 1 - typecheck1.c}
+\subsubsection{Input File}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
+/*Result: FAIL*/
+
+/*
+*	Sample --C Type checking #1
+*	This example should FAIL
+*
+*	Henry Thacker
+*/
+
+int myfn(int a) {
+	return a + 2;
+}
+
+
+int main() {
+	return myfn(myfn);
+}
+\end{lstlisting}
+\subsubsection{Purpose of Test}
+This example is supposed to cause a failure in the interpreter. Unfortunately the TAC generator is likely to still generate a TAC representation for this input, because it is unable to type check parameters. As a result, the code generator will also go on to generate an invalid MIPS assembly program.
+\subsubsection{Expected Result}
+The expected output for this test $=$ Typecheck failure
+\subsubsection{Interpreter Result}
+The result from the interpreter is: Could not be interpreted
+\subsubsection{Generated TAC}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
+BeginFn myfn
+_myfn:
+InitFrame 2
+PopParam a
+FnBody
+_t1 = a + 2
+Return _t1
+EndFn
+BeginFn main
+_main:
+InitFrame 1
+FnBody
+PrepareToCall 1
+PushParam myfn
+_t2 = CallFn _myfn
+Return _t2
+EndFn
+
+\end{lstlisting}\subsubsection{Generated MIPS Assembly}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
+         
+# Sun Jan 10 19:16:24 2010
+
+.data
+	EOL:	.asciiz "\n"
+.text
+
+_myfn:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 24	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	lw $a0, ($sp)	# Pop the parameter
+	sw $a0, -4($fp)	# Write param into heap
+	sw $s7, ($sp)	# Save return address in stack
+	lw $t1, -4($fp)	# Load local variable
+	addi $t0, $t1, 2
+	move $v0, $t0	# Assign values
+	sw $t0, -8($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+_main:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 20	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	sub $sp, $sp, 4
+	sw $s7, ($sp)	# Save return address in stack
+	la $v0, _myfn	# Store address of function
+	move $v1, $s0	# Store static link to call with
+	jal rfunc	# Register fn variable
+	move $t0, $v0	# Return fn descriptor address
+	sub $sp, $sp, 4	# Move stack pointer
+	sw $t0, ($sp)	# Write param into stack
+	lw $v0, ($s0)	# Point callee to same static link as mine (caller)
+	move $a1, $s0	# Pass dynamic link
+	jal _myfn
+	move $t0, $v0
+	sw $t0, -4($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+# Make a new activation record
+# Precondition: $a0 contains total required heap size, $a1 contains dynamic link, $v0 contains static link
+# Returns: start of heap address in $v0, heap contains reference to static link and old $fp value
+mk_ar:
+	move $s1, $v0	# Backup static link in $s1
+	li $v0, 9	# Allocate space systemcode
+	syscall	# Allocate space on heap
+	move $s2, $fp	# Backup old $fp in $s2
+	add $fp, $v0, $a0	# $fp = heap start address + heap size
+	sw $s1, ($v0)	# Save static link
+	sw $s2, 4($v0)	# Save old $fp
+	sw $a1, 8($v0)	# Save dynamic link
+	sw $a0, 12($v0)	# Save framesize
+	jr $ra
+# Make a new function variable entry
+# Precondition: $v0 contains function address, $v1 contains static link
+# Returns: address of allocated fn entry descriptor in $v0
+rfunc:
+	move $s1, $v0	# Backup fn address in $s1
+	li $a0, 8	# Space required for descriptor
+	li $v0, 9	# Allocate space systemcode
+	syscall	# Allocate space on heap
+	sw $s1, ($v0)	# Store fn address
+	sw $v1, 4($v0)	# Store static link
+	jr $ra
+	.globl main
+main:
+	move $a1, $zero	# Zero dynamic link
+	move $v0, $zero	# Zero static link
+	jal _main
+	move $a0, $v0	# Retrieve the return value of the main function
+	li $v0, 1	# Print integer
+	syscall
+	li $v0, 4	# Print string
+	la $a0, EOL	# Printing EOL character
+	syscall
+	li $v0, 10	# System exit
+	syscall
+
+\end{lstlisting}\subsubsection{SPIM Output}
+\begin{verbatim}
+SPIM Version 7.4 of January 1, 2009
+Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
+All Rights Reserved.
+See the file README for a full copyright notice.
+Loaded: /opt/local/share/spim/exceptions.s
+268566550
+\end{verbatim}
+\subsubsection{Test Analysis}
+\begin{description}
+	\item[Interpreter] The interpreter gave the expected result - An integer parameter was expected to be passed to \verb!myfn!, so the interpreter raised an error.
+	\item[TAC] Because the TAC generator does not type-check pushed parameters, it continues to generate a TAC translation for the invalid program.
+	\item[MIPS] The TAC representation given to the code generator is incorrect, so the generated MIPS program returns an undefined response when run in SPIM.
+\end{description}
