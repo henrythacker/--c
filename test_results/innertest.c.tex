@@ -27,7 +27,9 @@ int fn2() {
 int main() {
 	return fn1() + fn2();
 }
-\end{lstlisting}\subsubsection{Purpose of Test}
+\end{lstlisting}
+\subsubsection{Purpose of Test}
+This tests are designed to check calling inner functions works. It is expected that the code generation phase will fail because the two inner functions have the same name.
 
 \subsubsection{Expected Result}
 The expected output for this test $=$ Result: 33
