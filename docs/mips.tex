@@ -61,20 +61,24 @@ After the TAC is ready to iterate over, a special \verb!mips_instruction! is out
 	\item[TT\_PUSH\_PARAM] To push a parameter, \verb!already_in_reg! is called to check whether it is already accessible in a register. If not, we load the variable into register \$a0 temporarily. The loaded parameter is then pushed into the stack and the stack pointer adjusted accordingly.
 	\item[TT\_ASSIGN] Firstly, a register is allocated to the result variable using \verb!get_register!. The value to store is searched for in registers, if it is found, then a simple \verb!move! operation between registers takes place. Otherwise, a the value is moved into a register using the \verb!choose_best_reg! function. At this point, if the variable is located outside of the local scope, the static links are followed (please see section \ref{sec:staticlinks} for the method). Finally, the result variable is marked as having a modified value.
 	\item[TT\_IF] Due to the way conditions are handled in the TAC instruction set, the handling of the \verb!IF! statement during the code generation stage is very simple, as the condition will have already been reduced to an integer. The condition value is loaded into a register using the \verb!get_register! function. As a result, a \verb!bne! (\emph{Branch not equal}) statement is sufficient to perform the branch.
-	\item[TT\_FN\_CALL] 
 	\item[TT\_RETURN]
 		\begin{description}
-			\item[With return value] If the operand1 member of the \verb!tac_quad! is set then a value is being returned.
+			\item[With return value] If the operand1 member of the \verb!tac_quad! is set then a value is being returned. If the value is \textbf{NOT} a function typed variable, then the value is simply moved to \$v0 as a return value. Because function typed variables capture scope, they are a more complex case and are covered in section \ref{sec:ftv}. After the return value has been stored in \$v0, the steps are the same as those below.
 			\item[Without a return value] If the operand1 member of the \verb!tac_quad! is \verb!NULL! then no return value is returned. Before returning, any \$t registers that have been used are saved. The \verb!clear_regs! function is used to clear out our register descriptors. The previously saved return address is popped from the stack and restored into \$ra. The previous frame pointer is also restored so that the procedure that we return to, can find its variables using the correct offsets. Finally, we restore the previously saved static link (\$s0) and jump back to the address in \$ra.
 		\end{description}
+	\item[TT\_FN\_CALL] 
 \end{description}
 
-% Nested functions with the same name will not work - MIPS 
+\subsection{Function Typed Variables}
+\label{sec:ftv}
+In order to facilitate the use of function typed variables, at runtime we must be able look up not just the start address of the function (as we can for labels), but also the correct static link. By the time we come to invoke the function, we have lost any context about where the function was originally defined. To remedy this, each time a function typed variable is \textbf{created}, a call is made to another helper routine that is appended into the generated assembly: \verb!rfunc!. \verb!rfunc! takes a reference to the function entry point in register \$v0 and the correct static link in \$v1. 8 bytes of memory is allocated in the heap to store this pair within \verb!rfunc!. The address to this function descriptor is returned in \$v0.
+\ \\ \ \\
+When the function is invoked, the function descriptor is consulted in order to deduce which static link should be used.
+
 
 \subsection{Traversing static links}
 \label{sec:staticlinks}
 The logic behind traversing static links was something else that had to be researched extensively. 
-
 
 \subsection{Optimisation}
 % Zero Register Substitution
@@ -82,6 +86,7 @@ The logic behind traversing static links was something else that had to be resea
 % Optimisation.C
 
 \subsection{State of the MIPS Assembler Compiler}
+% Nested functions with the same name will not work - MIPS 
 
 \begin{figure}[p]
 	\begin{verbatim}
