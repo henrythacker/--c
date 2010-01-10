@@ -93,7 +93,18 @@ When the function is invoked, the function descriptor is consulted in order to d
 
 \subsection{Traversing Static Links}
 \label{sec:staticlinks}
-The logic behind traversing static links was something else that had to be researched extensively. 
+The logic behind traversing static links was something else that had to be researched extensively. Whenever a variable is asked for in a function, if it is stored outside our current environment then we must follow the static link (stored at 0(\$fp)) to find it. We may need to traverse several levels of static link before we are guaranteed to find it. The \verb!cg_find_variable! calculates the difference in nesting between our current environment and the variable's environment. With this knowledge it is possible to traverse the correct number of static links such that the variable can be accessed from its usual offset.
+\ \\ \ \\
+The logic behind this is fairly straightforward, however it is slightly more difficult to work out what static link to pass in the first place. As the functions are no longer nested in the program's text, the static link between functions must be passed almost as another parameter to the function when it is invoked. Luckily, there are well-known rules that make this easy to ascertain. Muchnick details these rules as follows:
+\begin{figure}[H]
+\begin{enumerate}
+	\item If the procedure being called is nested directly within its caller, its static link points to its caller's frame
+	\item If the procedure is at the same level of nesting as its caller, then its static link is a copy of its caller's static link
+	\item If the procedure being called is $n$ levels higher than the caller in the nesting structure then its static link can be determined by following $n$ static links back from the caller's static link and copying the static link found there
+\end{enumerate}
+\caption{What static link should be passed?\cite{muchnick1997}}
+\end{figure}
+These rules are encoded in the \verb!cg_load_static_link! function within \verb!mips.c!. The nesting of a function is determined by taking the nesting of its environment. The environmental nesting level is defined as how many static links we have to follow to get back to the global environment (whose static link is 0). Once the nesting difference between the caller and callee have been calculated, the rules above can be applied.
 
 \subsection{Optimisation}
 \label{sec:opt}
