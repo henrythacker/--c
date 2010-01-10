@@ -1,1 +1,36 @@
 \chapter{Critical Analysis}
+
+Could probably call free() a few more times
+
+
+\section{Interpreter}
+
+\section{TAC Generator}
+Some TAC statements not used in the MIPS part
+
+Mention issues in TAC / MIPS about new scope in IF statements and WHILES, not supported
+
+
+\section{MIPS Assembler Compiler}
+Nested functions with the same name will not work - MIPS 
+
+No analysis about how many registers are required by which block. Doing this could mean that we avoid having to write things out to RAM (slow) and subsequently load them back in when control returns (slow).
+
+Heuristic for removing variables that were assigned first, not necessarily helpful.
+
+Optimization should be done in blocks - but doing it over fns at the mo
+
+Liveness check not completed
+
+Global variables do not work in code generator, all other examples should be OK
+
+
+Should be using arguments registers $a0-$a3, decided to use stack for ease of use.
+
+
+Wasteful on heap space - didn't find a way to free in SPIM anyway (Usually heap assignment requires GC).
+
+Registers \$t0-\$t9 usable by user program, \$s registers completely RESERVED for internal use (V WASTEFUL) - Could improve by having compiler registers being allocated dynamically using the same allocation methods used for user registers.
+
+
+Could get a lot cleverer about what functions actually do.. If they don't have inner fns or call other functions, we could prevent having to make an activation record in the heap and could create a temporary one in the stack to reduce some code overhead. 
