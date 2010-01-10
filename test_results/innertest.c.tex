@@ -221,6 +221,6 @@ spim: (parser) Label is defined for the second time on line 81 of file /Users/he
 \begin{description}
 	\item[Interpreter] The interpreter gave the expected result
 	\item[TAC] The TAC seems fairly optimised except that the return value for a function call could be written straight into the answer variable rather than into a temporary first.
-	\item[MIPS] The code is invalid because there are function labels with duplicate names (see section \ref{sec:stateMIPS}). As a result, this test will not run.
+	\item[MIPS] The code is invalid because there are function labels with duplicate names (see section \ref{sec:stateMIPS}). As a result, this test will not run properly. SPIM does try to execute the code anyway and gives 22 as the result. This value comes from the wrong \verb!inner1! function being selected, so the result is calculated as $11 + 11 = 22$ instead of $11 + 22 = 33$.
 \end{description}
 
