@@ -1,7 +1,13 @@
 \chapter{Critical Analysis}
 
-Could probably call free() a few more times
-
+\section{General Comments}
+Given the limited time that we were allocated for this project, the level of progression that has been made through the various stages of this project is really satisfying. The interpreter is essentially fully functional and the other two sections only have a few minor flaws to remedy. There are some general comments that can be made regarding the state of the various parts of the compiler (in no particular order). Due to the size of the project and the number of implementation files, there will likely be some very small parts of code which were never used. The codebase has grown fairly large now and would probably benefit from being more rigorously documented to ensure that no functions exist that duplicate functionality of others or any that may never even be called.
+\ \\ \ \\
+Memory management is an area that would have to be looked at for this to ever transition into a serious compiler. The only place where memory is explicitly freed is where optimisations take place. With the limited use of a language without strings and a large standard library, it is difficult to see this becoming a problem in practice, but it still something to consider. Some of the functions, particularly those heavily used such as \verb!store()! in \verb!environment.c! are fairly unwieldy and have ended up with a multitude of different parameters for different contexts. Such large functions would be far clearer and thus less prone to bugs if they were rewritten and tested as smaller functions.
+\ \\ \ \\
+The coding standard is consistent throughout, all externally visible functions are declared in header files to try and give a greater sense of modularity. The code was compiled with the C89 (ANSI) and pedantic flags to try and clear up any non-standard code. While a test harness was developed for the generated programs, it would have also made sense to also look at testing the important functions within the coursework code itself to ensure that the functions all work as expected. In a few places within the project the \verb!assert()! function is used (defined in \verb!utilities.c!) to ensure that the internal state of the program is as expected. It would have been beneficial to introduce this to more places within the code.
+\ \\ \ \\
+Due to the number of different types of data that can be output by the various stages of the compiler, the use of \verb!var_args! was really beneficial in this project. Using \verb!var_args! means that commonly used functions such as \verb!fatal! and \verb!make_label_operand! are able to make use of variable numbers of arguments of varying types. This saves space and complexity by reducing the necessity of writing multiple ``type specific" functions.
 
 \section{Interpreter}
 
