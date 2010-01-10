@@ -1,0 +1,211 @@
+\section{Test 18}
+\subsection{Input File}
+\begin{verbatim}
+/*Result: 11*/
+
+/*
+*	Sample --C Test simple inner function
+*	Henry Thacker
+*/
+
+int main() {
+	int times2(int a) {
+		return a * 2;
+	}
+	int me(int b) {
+		int addOneTimes2(int a) { 
+			return times2(a) + 1; 
+		}
+		return addOneTimes2(b);
+	}
+	return me(5);
+}\end{verbatim}\subsection{Purpose of Test}
+
+\subsection{Expected Result}
+The expected result for this test is Result: 11
+\subsection{Interpreter Result}
+The result from the interpreter is 11
+\subsection{Generated TAC}
+\begin{verbatim}
+Environment: 0x100100c20
+Static link via: 0x1001008e0 [Nested 1 levels deep]
+[274]:
+	func - identifier: times2, entry-point: 0x100100350, returns: integer, definition-env: 0x100100c20, params: 1
+ - var_number: 0
+[645]:
+	temporary - identifier: _t5 - var_number: 2
+[717]:
+	func - identifier: me, entry-point: 0x100100760, returns: integer, definition-env: 0x100100c20, params: 1
+ - var_number: 1
+BeginFn main
+_main:
+InitFrame 3
+FnBody
+BeginFn times2
+_times2:
+InitFrame 2
+PopParam a
+FnBody
+_t1 = a * 2
+Return _t1
+EndFn
+BeginFn me
+_me:
+InitFrame 3
+PopParam b
+FnBody
+BeginFn addOneTimes2
+_addOneTimes2:
+InitFrame 3
+PopParam a
+FnBody
+PrepareToCall 1
+PushParam a
+_t3 = CallFn _times2
+_t2 = _t3 + 1
+Return _t2
+EndFn
+PrepareToCall 1
+PushParam b
+_t4 = CallFn _addOneTimes2
+Return _t4
+EndFn
+PrepareToCall 1
+PushParam 5
+_t5 = CallFn _me
+Return _t5
+EndFn
+\end{verbatim}\subsection{Generated MIPS Assembly}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
+         
+# Sun Jan 10 13:55:19 2010
+
+.data
+	EOL:	.asciiz "\n"
+.text
+
+_main:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 28	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	sub $sp, $sp, 4
+	sw $s7, ($sp)	# Save return address in stack
+	li $a0, 5
+	sub $sp, $sp, 4	# Move stack pointer
+	sw $a0, ($sp)	# Write param into stack
+	move $v0, $s0	# Set this current activation record as the static link
+	move $a1, $s0	# Pass dynamic link
+	jal _me
+	move $t0, $v0
+	sw $t0, -12($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+_times2:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 24	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	lw $a0, ($sp)	# Pop the parameter
+	sw $a0, -4($fp)	# Write param into heap
+	sw $s7, ($sp)	# Save return address in stack
+	lw $t1, -4($fp)	# Load local variable
+	li $t2, 2
+	mult $t1, $t2
+	mflo $t0
+	move $v0, $t0	# Assign values
+	sw $t0, -8($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+_me:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 28	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	lw $a0, ($sp)	# Pop the parameter
+	sw $a0, -4($fp)	# Write param into heap
+	sw $s7, ($sp)	# Save return address in stack
+	lw $t0, -4($fp)	# Load local variable
+	move $a0, $t0	# Assign values
+	sub $sp, $sp, 4	# Move stack pointer
+	sw $a0, ($sp)	# Write param into stack
+	move $v0, $s0	# Set this current activation record as the static link
+	move $a1, $s0	# Pass dynamic link
+	jal _addOneTimes2
+	move $t0, $v0
+	sw $t0, -12($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+_addOneTimes2:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 28	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	lw $a0, ($sp)	# Pop the parameter
+	sw $a0, -4($fp)	# Write param into heap
+	sw $s7, ($sp)	# Save return address in stack
+	lw $t0, -4($fp)	# Load local variable
+	move $a0, $t0	# Assign values
+	sub $sp, $sp, 4	# Move stack pointer
+	sw $a0, ($sp)	# Write param into stack
+	lw $v0, ($s0)	# Move up one static link
+	lw $v0, ($v0)	# Point callee to same static link as mine (caller)
+	move $a1, $s0	# Pass dynamic link
+	jal _times2
+	move $t0, $v0
+	addi $t1, $t0, 1
+	move $v0, $t1	# Assign values
+	sw $t0, -12($fp)	# Write out used local variable
+	sw $t1, -8($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+# Make a new activation record
+# Precondition: $a0 contains total required heap size, $a1 contains dynamic link, $v0 contains static link
+# Returns: start of heap address in $v0, heap contains reference to static link and old $fp value
+mk_ar:
+	move $s1, $v0	# Backup static link in $s1
+	li $v0, 9	# Allocate space systemcode
+	syscall	# Allocate space on heap
+	move $s2, $fp	# Backup old $fp in $s2
+	add $fp, $v0, $a0	# $fp = heap start address + heap size
+	sw $s1, ($v0)	# Save static link
+	sw $s2, 4($v0)	# Save old $fp
+	sw $a1, 8($v0)	# Save dynamic link
+	sw $a0, 12($v0)	# Save framesize
+	jr $ra
+	.globl main
+main:
+	move $a1, $zero	# Zero dynamic link
+	move $v0, $zero	# Zero static link
+	jal _main
+	move $a0, $v0	# Retrieve the return value of the main function
+	li $v0, 1	# Print integer
+	syscall
+	li $v0, 4	# Print string
+	la $a0, EOL	# Printing EOL character
+	syscall
+	li $v0, 10	# System exit
+	syscall
+
+\end{lstlisting}\subsection{SPIM Output}
+\begin{verbatim}
+SPIM Version 7.4 of January 1, 2009
+Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
+All Rights Reserved.
+See the file README for a full copyright notice.
+Loaded: /opt/local/share/spim/exceptions.s
+11
+\end{verbatim}\subsection{Test Analysis}
+

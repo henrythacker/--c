@@ -1,0 +1,101 @@
+\section{Test 17}
+\subsection{Input File}
+\begin{verbatim}
+/*Result: 37*/
+
+/*
+*	Sample --C Really simple maths 
+*	Henry Thacker
+*/
+
+int main() {
+	int a = 5;
+	return a + 32;
+}
+\end{verbatim}\subsection{Purpose of Test}
+
+\subsection{Expected Result}
+The expected result for this test is Result: 37
+\subsection{Interpreter Result}
+The result from the interpreter is 37
+\subsection{Generated TAC}
+\begin{verbatim}
+Environment: 0x1001006e0
+Static link via: 0x1001003a0 [Nested 1 levels deep]
+[97]:
+	int - identifier: a, value: 5 - var_number: 0
+[641]:
+	temporary - identifier: _t1 - var_number: 1
+BeginFn main
+_main:
+InitFrame 2
+FnBody
+a = 5
+_t1 = a + 32
+Return _t1
+EndFn
+\end{verbatim}\subsection{Generated MIPS Assembly}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
+         
+# Sun Jan 10 13:55:19 2010
+
+.data
+	EOL:	.asciiz "\n"
+.text
+
+_main:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 24	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	sub $sp, $sp, 4
+	sw $s7, ($sp)	# Save return address in stack
+	lw $t0, -4($fp)	# Load local variable
+	li $t0, 5
+	addi $t1, $t0, 32
+	move $v0, $t1	# Assign values
+	sw $t0, -4($fp)	# Write out used local variable
+	sw $t1, -8($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+# Make a new activation record
+# Precondition: $a0 contains total required heap size, $a1 contains dynamic link, $v0 contains static link
+# Returns: start of heap address in $v0, heap contains reference to static link and old $fp value
+mk_ar:
+	move $s1, $v0	# Backup static link in $s1
+	li $v0, 9	# Allocate space systemcode
+	syscall	# Allocate space on heap
+	move $s2, $fp	# Backup old $fp in $s2
+	add $fp, $v0, $a0	# $fp = heap start address + heap size
+	sw $s1, ($v0)	# Save static link
+	sw $s2, 4($v0)	# Save old $fp
+	sw $a1, 8($v0)	# Save dynamic link
+	sw $a0, 12($v0)	# Save framesize
+	jr $ra
+	.globl main
+main:
+	move $a1, $zero	# Zero dynamic link
+	move $v0, $zero	# Zero static link
+	jal _main
+	move $a0, $v0	# Retrieve the return value of the main function
+	li $v0, 1	# Print integer
+	syscall
+	li $v0, 4	# Print string
+	la $a0, EOL	# Printing EOL character
+	syscall
+	li $v0, 10	# System exit
+	syscall
+
+\end{lstlisting}\subsection{SPIM Output}
+\begin{verbatim}
+SPIM Version 7.4 of January 1, 2009
+Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
+All Rights Reserved.
+See the file README for a full copyright notice.
+Loaded: /opt/local/share/spim/exceptions.s
+37
+\end{verbatim}\subsection{Test Analysis}
+

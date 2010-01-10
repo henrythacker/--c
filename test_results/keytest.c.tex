@@ -1,0 +1,246 @@
+\section{Test 11}
+\subsection{Input File}
+\begin{verbatim}
+/*Result: 83*/
+
+/*
+*	Sample --C Test scope traversal
+*	Henry Thacker
+*/
+
+int main() {
+	int a = 5;
+	int b = 9;
+	int my_func() {
+		int c = 20;		
+		int test() {
+			int d = 11;
+			int test2() {  
+				d = 18;
+				return c + d + b + a + 13;
+			}
+			return test2() + d;
+		}
+		return test();
+	}
+	return my_func();
+}\end{verbatim}\subsection{Purpose of Test}
+
+\subsection{Expected Result}
+The expected result for this test is Result: 83
+\subsection{Interpreter Result}
+The result from the interpreter is 83
+\subsection{Generated TAC}
+\begin{verbatim}
+Environment: 0x100100fa0
+Static link via: 0x100100c60 [Nested 1 levels deep]
+[97]:
+	int - identifier: a, value: 5 - var_number: 0
+[98]:
+	int - identifier: b, value: 9 - var_number: 1
+[627]:
+	func - identifier: my_func, entry-point: 0x100100b20, returns: integer, definition-env: 0x100100fa0, params: 0
+ - var_number: 2
+[648]:
+	temporary - identifier: _t8 - var_number: 3
+BeginFn main
+_main:
+InitFrame 4
+FnBody
+a = 5
+b = 9
+BeginFn my_func
+_my_func:
+InitFrame 3
+FnBody
+c = 20
+BeginFn test
+_test:
+InitFrame 4
+FnBody
+d = 11
+BeginFn test2
+_test2:
+InitFrame 4
+FnBody
+d = 18
+_t4 = c + d
+_t3 = _t4 + b
+_t2 = _t3 + a
+_t1 = _t2 + 13
+Return _t1
+EndFn
+PrepareToCall 0
+_t6 = CallFn _test2
+_t5 = _t6 + d
+Return _t5
+EndFn
+PrepareToCall 0
+_t7 = CallFn _test
+Return _t7
+EndFn
+PrepareToCall 0
+_t8 = CallFn _my_func
+Return _t8
+EndFn
+\end{verbatim}\subsection{Generated MIPS Assembly}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
+         
+# Sun Jan 10 13:55:19 2010
+
+.data
+	EOL:	.asciiz "\n"
+.text
+
+_main:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 32	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	sub $sp, $sp, 4
+	sw $s7, ($sp)	# Save return address in stack
+	lw $t0, -4($fp)	# Load local variable
+	li $t0, 5
+	lw $t1, -8($fp)	# Load local variable
+	li $t1, 9
+	sw $t0, -4($fp)	# Write out used local variable
+	sw $t1, -8($fp)	# Write out used local variable
+	move $v0, $s0	# Set this current activation record as the static link
+	move $a1, $s0	# Pass dynamic link
+	jal _my_func
+	move $t0, $v0
+	sw $t0, -16($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+_my_func:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 28	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	sub $sp, $sp, 4
+	sw $s7, ($sp)	# Save return address in stack
+	lw $t0, -4($fp)	# Load local variable
+	li $t0, 20
+	sw $t0, -4($fp)	# Write out used local variable
+	move $v0, $s0	# Set this current activation record as the static link
+	move $a1, $s0	# Pass dynamic link
+	jal _test
+	move $t0, $v0
+	sw $t0, -12($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+_test:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 32	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	sub $sp, $sp, 4
+	sw $s7, ($sp)	# Save return address in stack
+	lw $t0, -4($fp)	# Load local variable
+	li $t0, 11
+	sw $t0, -4($fp)	# Write out used local variable
+	move $v0, $s0	# Set this current activation record as the static link
+	move $a1, $s0	# Pass dynamic link
+	jal _test2
+	move $t0, $v0
+	lw $t2, -4($fp)	# Load local variable
+	add $t1, $t0, $t2
+	move $v0, $t1	# Assign values
+	sw $t0, -16($fp)	# Write out used local variable
+	sw $t1, -12($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+_test2:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 32	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	sub $sp, $sp, 4
+	sw $s7, ($sp)	# Save return address in stack
+	lw $t0, ($s0)	# Move up a static link
+	lw $t1, 12($t0)	# Load framesize for static link
+	add $t1, $t1, $t0	# Seek to $fp [end of AR]
+	lw $t0, -4($t1)	# d
+	li $t0, 18
+	lw $t2, ($s0)	# Move up a static link
+	lw $t2, ($t2)	# Move up a static link
+	lw $t3, 12($t2)	# Load framesize for static link
+	add $t3, $t3, $t2	# Seek to $fp [end of AR]
+	lw $t2, -4($t3)	# c
+	add $t1, $t2, $t0
+	lw $t4, ($s0)	# Move up a static link
+	lw $t4, ($t4)	# Move up a static link
+	lw $t4, ($t4)	# Move up a static link
+	lw $t5, 12($t4)	# Load framesize for static link
+	add $t5, $t5, $t4	# Seek to $fp [end of AR]
+	lw $t4, -8($t5)	# b
+	add $t3, $t1, $t4
+	lw $t6, ($s0)	# Move up a static link
+	lw $t6, ($t6)	# Move up a static link
+	lw $t6, ($t6)	# Move up a static link
+	lw $t7, 12($t6)	# Load framesize for static link
+	add $t7, $t7, $t6	# Seek to $fp [end of AR]
+	lw $t6, -4($t7)	# a
+	add $t5, $t3, $t6
+	addi $t7, $t5, 13
+	move $v0, $t7	# Assign values
+	lw $t8, ($s0)	# Move up a static link
+	lw $s6, 12($t8)	# Load framesize for static link
+	add $s6, $s6, $t8	# Seek to $fp [end of AR]
+	sw $t0, -4($s6)	# Save distant modified variable
+	sw $t1, -16($fp)	# Write out used local variable
+	sw $t3, -12($fp)	# Write out used local variable
+	sw $t5, -8($fp)	# Write out used local variable
+	sw $t7, -4($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+# Make a new activation record
+# Precondition: $a0 contains total required heap size, $a1 contains dynamic link, $v0 contains static link
+# Returns: start of heap address in $v0, heap contains reference to static link and old $fp value
+mk_ar:
+	move $s1, $v0	# Backup static link in $s1
+	li $v0, 9	# Allocate space systemcode
+	syscall	# Allocate space on heap
+	move $s2, $fp	# Backup old $fp in $s2
+	add $fp, $v0, $a0	# $fp = heap start address + heap size
+	sw $s1, ($v0)	# Save static link
+	sw $s2, 4($v0)	# Save old $fp
+	sw $a1, 8($v0)	# Save dynamic link
+	sw $a0, 12($v0)	# Save framesize
+	jr $ra
+	.globl main
+main:
+	move $a1, $zero	# Zero dynamic link
+	move $v0, $zero	# Zero static link
+	jal _main
+	move $a0, $v0	# Retrieve the return value of the main function
+	li $v0, 1	# Print integer
+	syscall
+	li $v0, 4	# Print string
+	la $a0, EOL	# Printing EOL character
+	syscall
+	li $v0, 10	# System exit
+	syscall
+
+\end{lstlisting}\subsection{SPIM Output}
+\begin{verbatim}
+SPIM Version 7.4 of January 1, 2009
+Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
+All Rights Reserved.
+See the file README for a full copyright notice.
+Loaded: /opt/local/share/spim/exceptions.s
+83
+\end{verbatim}\subsection{Test Analysis}
+

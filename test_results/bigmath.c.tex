@@ -1,0 +1,191 @@
+\section{Test 1}
+\subsection{Input File}
+\begin{verbatim}
+/*Result: 2034*/
+
+
+/*
+*	Sample --C Test large number of variable assignments
+*	Henry Thacker
+*/
+
+int main() {
+	int a = 5, b = 10;
+	int c = 929, d = 32;
+	int g;
+	int e = 90;
+	int f = 72;
+	int h = 442;
+	g = 12;
+	return a + b + c + d + e + f + g + (2 * h); 
+}\end{verbatim}\subsection{Purpose of Test}
+
+\subsection{Expected Result}
+The expected result for this test is Result: 2034
+\subsection{Interpreter Result}
+The result from the interpreter is 2034
+\subsection{Generated TAC}
+\begin{verbatim}
+Environment: 0x100100fd0
+Static link via: 0x100100c90 [Nested 1 levels deep]
+[97]:
+	int - identifier: a, value: 5 - var_number: 0
+[98]:
+	int - identifier: b, value: 10 - var_number: 1
+[99]:
+	int - identifier: c, value: 929 - var_number: 2
+[100]:
+	int - identifier: d, value: 32 - var_number: 3
+[101]:
+	int - identifier: e, value: 90 - var_number: 5
+[102]:
+	int - identifier: f, value: 72 - var_number: 6
+[103]:
+	int - identifier: g, value: 12 - var_number: 4
+[104]:
+	int - identifier: h, value: 442 - var_number: 7
+[641]:
+	temporary - identifier: _t1 - var_number: 8
+[642]:
+	temporary - identifier: _t2 - var_number: 9
+[643]:
+	temporary - identifier: _t3 - var_number: 10
+[644]:
+	temporary - identifier: _t4 - var_number: 11
+[645]:
+	temporary - identifier: _t5 - var_number: 12
+[646]:
+	temporary - identifier: _t6 - var_number: 13
+[647]:
+	temporary - identifier: _t7 - var_number: 14
+[648]:
+	temporary - identifier: _t8 - var_number: 15
+BeginFn main
+_main:
+InitFrame 16
+FnBody
+a = 5
+b = 10
+c = 929
+d = 32
+e = 90
+f = 72
+h = 442
+g = 12
+_t7 = a + b
+_t6 = _t7 + c
+_t5 = _t6 + d
+_t4 = _t5 + e
+_t3 = _t4 + f
+_t2 = _t3 + g
+_t8 = 2 * h
+_t1 = _t2 + _t8
+Return _t1
+EndFn
+\end{verbatim}\subsection{Generated MIPS Assembly}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
+         
+# Sun Jan 10 13:55:19 2010
+
+.data
+	EOL:	.asciiz "\n"
+.text
+
+_main:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 80	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	sub $sp, $sp, 4
+	sw $s7, ($sp)	# Save return address in stack
+	lw $t0, -4($fp)	# Load local variable
+	li $t0, 5
+	lw $t1, -8($fp)	# Load local variable
+	li $t1, 10
+	lw $t2, -12($fp)	# Load local variable
+	li $t2, 929
+	lw $t3, -16($fp)	# Load local variable
+	li $t3, 32
+	lw $t4, -24($fp)	# Load local variable
+	li $t4, 90
+	lw $t5, -28($fp)	# Load local variable
+	li $t5, 72
+	lw $t6, -32($fp)	# Load local variable
+	li $t6, 442
+	lw $t7, -20($fp)	# Load local variable
+	li $t7, 12
+	add $t8, $t0, $t1
+	add $t9, $t8, $t2
+	sw $t3, -16($fp)	# Write out used local variable
+	sw $t4, -24($fp)	# Write out used local variable
+	lw $t4, -16($fp)	# Load local variable
+	add $t3, $t9, $t4
+	sw $t5, -28($fp)	# Write out used local variable
+	sw $t6, -32($fp)	# Write out used local variable
+	lw $t6, -24($fp)	# Load local variable
+	add $t5, $t3, $t6
+	sw $t7, -20($fp)	# Write out used local variable
+	sw $t0, -4($fp)	# Write out used local variable
+	lw $t0, -28($fp)	# Load local variable
+	add $t7, $t5, $t0
+	sw $t1, -8($fp)	# Write out used local variable
+	sw $t8, -60($fp)	# Write out used local variable
+	lw $t8, -20($fp)	# Load local variable
+	add $t1, $t7, $t8
+	sw $t2, -12($fp)	# Write out used local variable
+	sw $t9, -56($fp)	# Write out used local variable
+	li $t9, 2
+	lw $t4, -32($fp)	# Load local variable
+	mult $t9, $t4
+	mflo $t2
+	sw $t3, -52($fp)	# Write out used local variable
+	add $t3, $t1, $t2
+	move $v0, $t3	# Assign values
+	sw $t1, -40($fp)	# Write out used local variable
+	sw $t2, -64($fp)	# Write out used local variable
+	sw $t3, -36($fp)	# Write out used local variable
+	sw $t5, -48($fp)	# Write out used local variable
+	sw $t7, -44($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+# Make a new activation record
+# Precondition: $a0 contains total required heap size, $a1 contains dynamic link, $v0 contains static link
+# Returns: start of heap address in $v0, heap contains reference to static link and old $fp value
+mk_ar:
+	move $s1, $v0	# Backup static link in $s1
+	li $v0, 9	# Allocate space systemcode
+	syscall	# Allocate space on heap
+	move $s2, $fp	# Backup old $fp in $s2
+	add $fp, $v0, $a0	# $fp = heap start address + heap size
+	sw $s1, ($v0)	# Save static link
+	sw $s2, 4($v0)	# Save old $fp
+	sw $a1, 8($v0)	# Save dynamic link
+	sw $a0, 12($v0)	# Save framesize
+	jr $ra
+	.globl main
+main:
+	move $a1, $zero	# Zero dynamic link
+	move $v0, $zero	# Zero static link
+	jal _main
+	move $a0, $v0	# Retrieve the return value of the main function
+	li $v0, 1	# Print integer
+	syscall
+	li $v0, 4	# Print string
+	la $a0, EOL	# Printing EOL character
+	syscall
+	li $v0, 10	# System exit
+	syscall
+
+\end{lstlisting}\subsection{SPIM Output}
+\begin{verbatim}
+SPIM Version 7.4 of January 1, 2009
+Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
+All Rights Reserved.
+See the file README for a full copyright notice.
+Loaded: /opt/local/share/spim/exceptions.s
+2034
+\end{verbatim}\subsection{Test Analysis}
+

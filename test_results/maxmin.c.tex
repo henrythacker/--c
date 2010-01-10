@@ -1,0 +1,222 @@
+\section{Test 15}
+\subsection{Input File}
+\begin{verbatim}
+/*Result: 5*/
+
+/*
+*	Sample --C max/min integer Programme
+*	Henry Thacker
+*/
+
+int max(int a, int b) {
+	if (a >= b) {
+		return a;
+	}
+	return b;
+}
+
+int min(int a, int b) {
+	if (a <= b) {
+		return a;
+	}
+	return b;
+}
+
+
+int main() {
+	int a = 5, b = 9;
+	return min(a, b);
+}\end{verbatim}\subsection{Purpose of Test}
+
+\subsection{Expected Result}
+The expected result for this test is Result: 5
+\subsection{Interpreter Result}
+The result from the interpreter is 5
+\subsection{Generated TAC}
+\begin{verbatim}
+Environment: 0x100102d70
+Static link via: 0x100100a70 [Nested 1 levels deep]
+[97]:
+	int - identifier: a, value: 5 - var_number: 0
+[98]:
+	int - identifier: b, value: 9 - var_number: 1
+[643]:
+	temporary - identifier: _t3 - var_number: 2
+BeginFn max
+_max:
+InitFrame 3
+PopParam a
+PopParam b
+FnBody
+_t1 = a >= b
+If _t1 Goto __if1true
+Goto __if1end
+__if1true:
+Return a
+__if1end:
+Return b
+EndFn
+BeginFn min
+_min:
+InitFrame 3
+PopParam a
+PopParam b
+FnBody
+_t2 = a <= b
+If _t2 Goto __if2true
+Goto __if2end
+__if2true:
+Return a
+__if2end:
+Return b
+EndFn
+BeginFn main
+_main:
+InitFrame 3
+FnBody
+a = 5
+b = 9
+PrepareToCall 2
+PushParam b
+PushParam a
+_t3 = CallFn _min
+Return _t3
+EndFn
+\end{verbatim}\subsection{Generated MIPS Assembly}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
+         
+# Sun Jan 10 13:55:19 2010
+
+.data
+	EOL:	.asciiz "\n"
+.text
+
+_max:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 28	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	lw $a0, ($sp)	# Pop the parameter
+	sw $a0, -4($fp)	# Write param into heap
+	add $sp, $sp, 4	# Move stack pointer
+	lw $a0, ($sp)	# Pop the parameter
+	sw $a0, -8($fp)	# Write param into heap
+	sw $s7, ($sp)	# Save return address in stack
+	lw $t1, -4($fp)	# Load local variable
+	lw $t2, -8($fp)	# Load local variable
+	sge $t0, $t1, $t2	# $c = $a >= $b
+	bne $t0, $zero, __if1true
+	j __if1end
+__if1true:
+	move $v0, $t1	# Assign values
+	sw $t0, -12($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+__if1end:
+	lw $t0, -8($fp)	# Load local variable
+	move $v0, $t0	# Assign values
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+_min:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 28	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	lw $a0, ($sp)	# Pop the parameter
+	sw $a0, -4($fp)	# Write param into heap
+	add $sp, $sp, 4	# Move stack pointer
+	lw $a0, ($sp)	# Pop the parameter
+	sw $a0, -8($fp)	# Write param into heap
+	sw $s7, ($sp)	# Save return address in stack
+	lw $t1, -4($fp)	# Load local variable
+	lw $t2, -8($fp)	# Load local variable
+	sle $t0, $t1, $t2	# $c = $a <= $b
+	bne $t0, $zero, __if2true
+	j __if2end
+__if2true:
+	move $v0, $t1	# Assign values
+	sw $t0, -12($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+__if2end:
+	lw $t0, -8($fp)	# Load local variable
+	move $v0, $t0	# Assign values
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+_main:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 28	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	sub $sp, $sp, 4
+	sw $s7, ($sp)	# Save return address in stack
+	lw $t0, -4($fp)	# Load local variable
+	li $t0, 5
+	lw $t1, -8($fp)	# Load local variable
+	li $t1, 9
+	sub $sp, $sp, 4	# Move stack pointer
+	sw $t1, ($sp)	# Write param into stack
+	sub $sp, $sp, 4	# Move stack pointer
+	sw $t0, ($sp)	# Write param into stack
+	sw $t0, -4($fp)	# Write out used local variable
+	sw $t1, -8($fp)	# Write out used local variable
+	lw $v0, ($s0)	# Point callee to same static link as mine (caller)
+	move $a1, $s0	# Pass dynamic link
+	jal _min
+	move $t0, $v0
+	sw $t0, -12($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+# Make a new activation record
+# Precondition: $a0 contains total required heap size, $a1 contains dynamic link, $v0 contains static link
+# Returns: start of heap address in $v0, heap contains reference to static link and old $fp value
+mk_ar:
+	move $s1, $v0	# Backup static link in $s1
+	li $v0, 9	# Allocate space systemcode
+	syscall	# Allocate space on heap
+	move $s2, $fp	# Backup old $fp in $s2
+	add $fp, $v0, $a0	# $fp = heap start address + heap size
+	sw $s1, ($v0)	# Save static link
+	sw $s2, 4($v0)	# Save old $fp
+	sw $a1, 8($v0)	# Save dynamic link
+	sw $a0, 12($v0)	# Save framesize
+	jr $ra
+	.globl main
+main:
+	move $a1, $zero	# Zero dynamic link
+	move $v0, $zero	# Zero static link
+	jal _main
+	move $a0, $v0	# Retrieve the return value of the main function
+	li $v0, 1	# Print integer
+	syscall
+	li $v0, 4	# Print string
+	la $a0, EOL	# Printing EOL character
+	syscall
+	li $v0, 10	# System exit
+	syscall
+
+\end{lstlisting}\subsection{SPIM Output}
+\begin{verbatim}
+SPIM Version 7.4 of January 1, 2009
+Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
+All Rights Reserved.
+See the file README for a full copyright notice.
+Loaded: /opt/local/share/spim/exceptions.s
+5
+\end{verbatim}\subsection{Test Analysis}
+

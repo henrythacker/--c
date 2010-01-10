@@ -1,0 +1,216 @@
+\section{Test 10}
+\subsection{Input File}
+\begin{verbatim}
+/*Result: 33*/
+
+/*
+*	Sample --C Inner Test Programme
+*	Henry Thacker
+*/
+
+/* Main entry point */
+
+int fn1() {
+	int inner1() {
+		return 11;
+	}
+	return inner1();
+}
+
+int fn2() {
+	int inner1() {
+		return 22;
+	}
+	return inner1();
+}
+
+int main() {
+	return fn1() + fn2();
+}\end{verbatim}\subsection{Purpose of Test}
+
+\subsection{Expected Result}
+The expected result for this test is Result: 33
+\subsection{Interpreter Result}
+The result from the interpreter is 33
+\subsection{Generated TAC}
+\begin{verbatim}
+Environment: 0x100102140
+Static link via: 0x1001007c0 [Nested 1 levels deep]
+[643]:
+	temporary - identifier: _t3 - var_number: 0
+[644]:
+	temporary - identifier: _t4 - var_number: 1
+[645]:
+	temporary - identifier: _t5 - var_number: 2
+BeginFn fn1
+_fn1:
+InitFrame 2
+FnBody
+BeginFn inner1
+_inner1:
+InitFrame 0
+FnBody
+Return 11
+EndFn
+PrepareToCall 0
+_t1 = CallFn _inner1
+Return _t1
+EndFn
+BeginFn fn2
+_fn2:
+InitFrame 2
+FnBody
+BeginFn inner1
+_inner1:
+InitFrame 0
+FnBody
+Return 22
+EndFn
+PrepareToCall 0
+_t2 = CallFn _inner1
+Return _t2
+EndFn
+BeginFn main
+_main:
+InitFrame 3
+FnBody
+PrepareToCall 0
+_t4 = CallFn _fn1
+PrepareToCall 0
+_t5 = CallFn _fn2
+_t3 = _t4 + _t5
+Return _t3
+EndFn
+\end{verbatim}\subsection{Generated MIPS Assembly}
+\begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
+         
+# Sun Jan 10 13:55:19 2010
+
+.data
+	EOL:	.asciiz "\n"
+.text
+
+_fn1:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 24	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	sub $sp, $sp, 4
+	sw $s7, ($sp)	# Save return address in stack
+	move $v0, $s0	# Set this current activation record as the static link
+	move $a1, $s0	# Pass dynamic link
+	jal _inner1
+	move $t0, $v0
+	sw $t0, -8($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+_fn2:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 24	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	sub $sp, $sp, 4
+	sw $s7, ($sp)	# Save return address in stack
+	move $v0, $s0	# Set this current activation record as the static link
+	move $a1, $s0	# Pass dynamic link
+	jal _inner1
+	move $t0, $v0
+	sw $t0, -8($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+_main:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 28	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	sub $sp, $sp, 4
+	sw $s7, ($sp)	# Save return address in stack
+	lw $v0, ($s0)	# Point callee to same static link as mine (caller)
+	move $a1, $s0	# Pass dynamic link
+	jal _fn1
+	move $t0, $v0
+	sw $t0, -8($fp)	# Write out used local variable
+	lw $v0, ($s0)	# Point callee to same static link as mine (caller)
+	move $a1, $s0	# Pass dynamic link
+	jal _fn2
+	move $t0, $v0
+	lw $t2, -8($fp)	# Load local variable
+	add $t1, $t2, $t0
+	move $v0, $t1	# Assign values
+	sw $t0, -12($fp)	# Write out used local variable
+	sw $t1, -4($fp)	# Write out used local variable
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+_inner1:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 16	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	sub $sp, $sp, 4
+	sw $s7, ($sp)	# Save return address in stack
+	li $v0, 11
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+_inner1:
+	move $s7, $ra	# Store Return address in $s7
+	li $a0, 16	# Store the frame size required for this AR
+	jal mk_ar
+	move $s0, $v0	# Store heap start address in $s0
+	sub $sp, $sp, 4
+	sw $s7, ($sp)	# Save return address in stack
+	li $v0, 22
+	lw $ra, ($sp)	# Get return address
+	add $sp, $sp, 4	# Pop return address from stack
+	lw $fp, 4($s0)	# Load previous frame ptr
+	lw $s0, 8($s0)	# Load dynamic link
+	jr $ra	# Jump to $ra
+# Make a new activation record
+# Precondition: $a0 contains total required heap size, $a1 contains dynamic link, $v0 contains static link
+# Returns: start of heap address in $v0, heap contains reference to static link and old $fp value
+mk_ar:
+	move $s1, $v0	# Backup static link in $s1
+	li $v0, 9	# Allocate space systemcode
+	syscall	# Allocate space on heap
+	move $s2, $fp	# Backup old $fp in $s2
+	add $fp, $v0, $a0	# $fp = heap start address + heap size
+	sw $s1, ($v0)	# Save static link
+	sw $s2, 4($v0)	# Save old $fp
+	sw $a1, 8($v0)	# Save dynamic link
+	sw $a0, 12($v0)	# Save framesize
+	jr $ra
+	.globl main
+main:
+	move $a1, $zero	# Zero dynamic link
+	move $v0, $zero	# Zero static link
+	jal _main
+	move $a0, $v0	# Retrieve the return value of the main function
+	li $v0, 1	# Print integer
+	syscall
+	li $v0, 4	# Print string
+	la $a0, EOL	# Printing EOL character
+	syscall
+	li $v0, 10	# System exit
+	syscall
+
+\end{lstlisting}\subsection{SPIM Output}
+\begin{verbatim}
+SPIM Version 7.4 of January 1, 2009
+Copyright 1990-2004 by James R. Larus (larus@cs.wisc.edu).
+All Rights Reserved.
+See the file README for a full copyright notice.
+Loaded: /opt/local/share/spim/exceptions.s
+22
+\end{verbatim}\subsection{Test Analysis}
+
