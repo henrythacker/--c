@@ -121,7 +121,7 @@ In \verb!optimisation.c!, three additional basic optimisations are included as f
 These optimisations, while simple, do reduce the size of the generated assembly program fairly significantly. Additionally, these examples are there to show that optimisation has been considered and is possible. With a bit more thought, these ideas could be extended to complicated optimisation strategies. The code that is produced is still fairly sub-optimal in places, but it is functional.
 
 \subsection{State of the MIPS Assembler Compiler}
-The code generator executes almost all of the examples, but there are a few things that will not work. Global variable declarations and operations do not work. If two outer functions contain inner functions with the same name, when these are expanded inline to MIPS assembler, the function labels will collide. Apart from these minor issues, the MIPS compiler is fairly functional. In the Critical Evaluation section a further critique of the produced code will be given, as there is much scope for improvement in this area.
+The code generator works with almost all of the examples, but there are a few things that it cannot do. Global variable declarations and operations do not work. If two outer functions contain inner functions with the same name, when these are expanded inline to MIPS assembler, the function labels will collide. Apart from these minor issues, the MIPS compiler is fairly functional. In the Critical Evaluation section a further critique of the produced code will be given, as there is much scope for improvement in this area.
 
 \begin{figure}[p]
 	\begin{verbatim}
