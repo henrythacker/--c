@@ -104,6 +104,7 @@ The logic behind this is fairly straightforward, however it is slightly more dif
 \end{enumerate}
 \caption{What static link should be passed?\cite{muchnick1997}}
 \end{figure}
+\ \\
 These rules are encoded in the \verb!cg_load_static_link! function within \verb!mips.c!. The nesting of a function is determined by taking the nesting of its environment. The environmental nesting level is defined as how many static links we have to follow to get back to the global environment (whose static link is 0). Once the nesting difference between the caller and callee have been calculated, the rules above can be applied.
 
 \subsection{Optimisation}
