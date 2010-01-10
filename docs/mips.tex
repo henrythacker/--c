@@ -44,7 +44,8 @@ The first implication, is that our Activation Record must contain a static link 
 \end{quotation}
 \ \\
 Another implication has already been touched upon. We mentioned the fact that the nested functions and function typed variables require Activation Records to stay around longer than they would on a stack. To solve this problem, Activation Records are created in the heap instead of the stack. On entry to each function, a heap allocated activation record is created and populated. The stack is \emph{still} used for the return address, as the push / pop nature of a stack is convenient. Parameters are also passed in the stack as there was not enough time to convert the first four parameters to use the \$a0 - \$a3 registers in preference to the stack. The ``stack pointer" equivalent for these heap allocated activation records is stored in \$s0 and the frame pointer in \$fp.
-
+\ \\ \ \\
+A further runtime implication is covered in section \ref{sec:ftv}, regarding the use and declaration of function variables.
 \subsection{Code Representation}
 Like TAC is stored internally in \verb!tac_quad! structures, MIPS instructions are held in a \verb!mips_instruction! structure. A few other structures are used for different types of instruction operands. The relevant structures can be examined in figure \ref{fig:mipsinstr}. Like the \verb!tac_quad! structures, the code is built up as a linked list, before being printed by a special \verb!print_mips! routine.
 
