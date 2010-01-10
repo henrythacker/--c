@@ -212,5 +212,10 @@ All Rights Reserved.
 See the file README for a full copyright notice.
 Loaded: /opt/local/share/spim/exceptions.s
 5
-\end{verbatim}\subsubsection{Test Analysis}
-
+\end{verbatim}
+\subsubsection{Test Analysis}
+\begin{description}
+	\item[Interpreter] The interpreter gave the expected result
+	\item[TAC] One of the functions \verb!max! is never called. It should be removed from the generated TAC as an optimisation.
+	\item[MIPS] The code produces the correct answer.
+\end{description}

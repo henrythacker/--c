@@ -44,7 +44,6 @@ EndFn
 
 \end{lstlisting}\subsubsection{Generated MIPS Assembly}
 \begin{lstlisting}[showstringspaces=false,breaklines=true,backgroundcolor=\color{light-gray}, captionpos=b]
-         
 Can not be compiled
 \end{lstlisting}\subsubsection{SPIM Output}
 \begin{verbatim}
@@ -57,5 +56,9 @@ The following symbols are undefined:
 main
 
 [0x00400014]	0x0c000000  jal 0x00000000 [main]           ; 180: jal main
-\end{verbatim}\subsubsection{Test Analysis}
-
+\end{verbatim}
+\subsubsection{Test Analysis}
+\begin{description}
+	\item[Interpreter] The interpreter gave the expected result
+	\item[MIPS] The code generator will not work for this example, because the example uses global variables. This restriction has already been noted in section \ref{sec:stateMIPS}.
+\end{description}

@@ -118,5 +118,9 @@ All Rights Reserved.
 See the file README for a full copyright notice.
 Loaded: /opt/local/share/spim/exceptions.s
 1
-\end{verbatim}\subsubsection{Test Analysis}
-
+\end{verbatim}
+\subsubsection{Test Analysis}
+\begin{description}
+	\item[Interpreter] The interpreter gave the expected result
+	\item[MIPS] The constant 5 is loaded into two registers. This is wasteful as the comparison could be done more simply with: \verb!sge $t0, $t1, $t1!, freeing up \$t2. The code produces the correct answer.
+\end{description}

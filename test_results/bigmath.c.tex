@@ -20,6 +20,7 @@ int main() {
 	return a + b + c + d + e + f + g + (2 * h); 
 }
 \end{lstlisting}\subsubsection{Purpose of Test}
+This test was created to see what happens when registers need to be spilled into the activation record.
 
 \subsubsection{Expected Result}
 The expected output for this test $=$ Result: 2034
@@ -155,5 +156,9 @@ All Rights Reserved.
 See the file README for a full copyright notice.
 Loaded: /opt/local/share/spim/exceptions.s
 2034
-\end{verbatim}\subsubsection{Test Analysis}
-
+\end{verbatim}
+\subsubsection{Test Analysis}
+\begin{description}
+	\item[Interpreter] The interpreter gave the expected result
+	\item[MIPS] The MIPS code writes variables out to memory quite a bit. The MIPS code just follows the simple rule where any spilled register should be written out to memory if it contains a modified value. Without any kind of liveness checking, it is difficult for the compiler to take more intelligent decisions. The code produces the correct answer.
+\end{description}

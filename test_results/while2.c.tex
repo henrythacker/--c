@@ -141,5 +141,11 @@ All Rights Reserved.
 See the file README for a full copyright notice.
 Loaded: /opt/local/share/spim/exceptions.s
 3
-\end{verbatim}\subsubsection{Test Analysis}
+\end{verbatim}
+\subsubsection{Test Analysis}
+\begin{description}
+	\item[Interpreter] The interpreter gave the expected result
+	\item[TAC] There are cases where a couple of different labels are defined next to each other (i.e. \verb!__if1end! and \verb!__while1end!). The reference to one of these labels could be removed (and all references to it refactored) to save extra lines in the output. This change would benefit the code generation stage too. Additionally some of the arithmetic operations are suboptimal, for instance: \verb!_t2 = i - 1! followed by \verb!i = _t2!, would be written better as: \verb!i = i - 1!.
+	\item[MIPS] The code produces the correct answer.
+\end{description}
 

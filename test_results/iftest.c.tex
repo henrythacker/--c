@@ -166,5 +166,10 @@ All Rights Reserved.
 See the file README for a full copyright notice.
 Loaded: /opt/local/share/spim/exceptions.s
 9
-\end{verbatim}\subsubsection{Test Analysis}
-
+\end{verbatim}
+\subsubsection{Test Analysis}
+\begin{description}
+	\item[Interpreter] The interpreter gave the expected result
+	\item[TAC] There are cases where a couple of different labels are defined next to each other (i.e. \verb!__if2end! and \verb!__if1end!). The reference to one of these labels could be removed (and all references to it refactored) to save extra lines in the output. This change would benefit the code generation stage too.
+	\item[MIPS] The code produces the correct answer.
+\end{description}

@@ -214,5 +214,11 @@ spim: (parser) Label is defined for the second time on line 81 of file /Users/he
 	         ^
 
 22
-\end{verbatim}\subsubsection{Test Analysis}
+\end{verbatim}
+\subsubsection{Test Analysis}
+\begin{description}
+	\item[Interpreter] The interpreter gave the expected result
+	\item[TAC] The TAC seems fairly optimised except that the return value for a function call could be written straight into the answer variable rather than into a temporary first.
+	\item[MIPS] The code is invalid because there are function labels with duplicate names (see section \ref{sec:stateMIPS}). As a result, this test will not run.
+\end{description}
 
