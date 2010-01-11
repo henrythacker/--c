@@ -12,17 +12,28 @@ The coding standard is consistent throughout, all externally visible functions a
 Due to the number of different types of data that can be output by the various stages of the compiler, the use of \verb!var_args! was really beneficial in this project. Using \verb!var_args! means that commonly used functions such as \verb!fatal! and \verb!make_label_operand! are able to make use of variable numbers of arguments of varying types. This saves space and complexity by reducing the necessity of writing multiple ``type specific" functions.
 
 \section{Interpreter}
-
+The interpreter is the most functional part of the whole system, there are only two known issues. The first issue is that writing \verb!my_function(void)!, where the \verb!void! denotes no parameters, will parse correctly but is not interpreted. Unfortunately this issue was picked up fairly late, but it would be fairly trivial to fix. The parameter-list in these cases simply contains the integer ``void". A simple if statement could disregard this when storing the function in the environment.
+\ \\ \ \\
+The second issue is that although return values are type checked, no error is thrown if \textbf{no} value is returned and the function definition expects a value to be returned. The current behaviour is actually more like the behaviour in C. In order to implement similar behaviour to Java, it would be necessary to follow every possible branch to check that each branch returns a value.
+\ \\ \ \\
+The environment structure was created as part of the implementation of the interpreter. It uses a hash table implementation to minimise the cost of accessing and storing values within the environment. The environment has a lot of utility functions that are used through every part of the project. Unfortunately this utility is offset by quite a lot of complexity that is introduced through making these functions flexible.
+\ \\ \ \\
+Another good part of the implementation is that the interpreter has full type checking for both parameters and return values. The associated functions were purposely written so that they could be reused in other parts of the project. 
 \section{TAC Generator}
-Some TAC statements not used in the MIPS part
-
-Mention issues in TAC / MIPS about new scope in IF statements and WHILES, not supported
-
-Type-checking of pushed parameter values
-
+The TAC Generator works for almost all of the test cases that were chosen. One issue with the TAC generator is that it does not accept input from standard input. This particular feature was alluded to in the coursework specification, but unfortunately not implemented due to time pressure. The only way to enter data into the TAC generator is via the parser. 
+\ \\ \ \\
+One of the main problems with the TAC generator at the moment is that it does not type check parameter values that are passed to functions. This means that some programs that are not accepted by the interpreter will be accepted by the TAC generator. This behaviour is obviously incorrect, but luckily the solution is already implemented in the interpreter. To fix this behaviour in the TAC generator, it would be a case of changing the \verb!push_params! procedure to take a reference to the callee function, so that the formal parameters can be compared to the actual parameters.
+\ \\ \ \\
+Some superfluous TAC instructions are present in the instruction set that are not used in the MIPS code generator (\verb!TT_FN_DEF!, \verb!TT_PREPARE!). The reason for this is that the TAC instruction set was developed prior to writing any of the code generator implementation. These additional instructions are not necessarily problematic as, in fact, they only serve to demonstrate the difference between what information is needed in each stage of the compiler. If further code generators were created for different architectures, they may benefit from these additional instructions, this is why these instructions have been left as part of the instruction set.
+\ \\ \ \\
+While the interpreter supports separate nested scopes within \verb!IF! and \verb!WHILE! statements, this functionality was not included in the TAC generator. This omission was an oversight and it was noted too late to include in the final code. Logically this feature is no more difficult to support in the TAC generator than in the interpreter.
+\ \\ \ \\
+Considering that the TAC instruction set was designed completely in advance of even researching MIPS, the instruction set has shown itself as ample to support the full code-generation procedure.
 
 \section{MIPS Assembler Compiler}
 Nested functions with the same name will not work - MIPS 
+
+Unwieldy structures - very long lines
 
 No analysis about how many registers are required by which block. Doing this could mean that we avoid having to write things out to RAM (slow) and subsequently load them back in when control returns (slow).
 
