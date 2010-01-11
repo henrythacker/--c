@@ -1,8 +1,17 @@
 \chapter{Further Improvements}
 
-The critical analysis has highlighted some areas that could improved as a future project. This section will detail some of these ideas in further depth along with possible implementation approaches.
+The critical analysis has highlighted some areas that could improved as part of a future project. This section will detail some of these ideas in further depth along with possible implementation approaches.
 
 \section{Register Use}
+One of the main criticisms surrounding the code generator are the register allocation choices that it makes. Currently it uses a version of a very simple approach that was discussed in lectures. Although this approach works, it generates code that would be many factors slower than a properly optimised program. Within the test cases, it is possible to see places where suboptimal decisions are made - for instance \verb!bigmath.c!, which was purposely designed to test register spills. Luckily, much research has been done into effective register allocation and there are documented methods such as graph colouring that aim to optimise the choices that are made at compile time. Although the graph colouring algorithm is generally an NP-complete problem, there are algorithms that are better in practice \cite{aho2007}.
+\ \\ \ \\
+The first step to improving the register allocation procedure is to implement a liveness check. This will enable us to make better decisions about which registers can be considered for reuse. A more comprehensive approach would be to implement a full graph colouring algorithm.
+
 \section{TAC Parsing}
+As noted in the document, it is currently not possible to load TAC instructions directly into the code generator. In order to implement this, a basic lexer / parser would need to be written in order to fill \verb!tac_quad! structures from the inputted file. Based on the instruction set that was presented in section \ref{sec:tacintro},
+
 \section{Optimisation}
+As a further extension to the submitted code, it would be good to look at partitioning the code into basic blocks. Once the code is in basic blocks, it is possible to optimise the blocks as if they were individual programs. Various optimisation approaches exist
+
 \section{Supporting Global Variables}
+In order to support global variables in the code generation phase, it would be necessary to re-create the idea of a ``global environment" in the code generator. To do this, the global environment would be found and the number of local variables would be checked. Within the main method, a space would be allocated within the heap of the required size. When looping over the \verb!tac_quad!s, if we see a variable assignment and we are not within an function, then the variable could be added to the correct place within the global environment.
