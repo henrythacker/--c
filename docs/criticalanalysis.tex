@@ -20,7 +20,7 @@ The environment structure was created as part of the implementation of the inter
 \ \\ \ \\
 Another good part of the implementation is that the interpreter has full type checking for both parameters and return values. The associated functions were purposely written so that they could be reused in other parts of the project. 
 \section{TAC Generator}
-The TAC Generator works for almost all of the test cases that were chosen. One issue with the TAC generator is that it does not accept input from standard input. This particular feature was alluded to in the coursework specification, but unfortunately not implemented due to time pressure. The only way to enter data into the TAC generator is via the parser. 
+The TAC Generator works for almost all of the test cases that were chosen. One issue with the TAC generator is that it does not accept input from standard input (in order to load user-specified TAC instructions directly into the code generator). This particular feature was alluded to in the coursework specification, but unfortunately not implemented due to time pressure. The only way to enter data into the TAC generator is via the parser. 
 \ \\ \ \\
 One of the main problems with the TAC generator at the moment is that it does not type check parameter values that are passed to functions. This means that some programs that are not accepted by the interpreter will be accepted by the TAC generator. This behaviour is obviously incorrect, but luckily the solution is already implemented in the interpreter. To fix this behaviour in the TAC generator, it would be a case of changing the \verb!push_params! procedure to take a reference to the callee function, so that the formal parameters can be compared to the actual parameters.
 \ \\ \ \\
