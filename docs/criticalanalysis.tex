@@ -31,27 +31,14 @@ While the interpreter supports separate nested scopes within \verb!IF! and \verb
 Considering that the TAC instruction set was designed completely in advance of even researching MIPS, the instruction set has shown itself as ample to support the full code-generation procedure.
 
 \section{MIPS Assembler Compiler}
-Nested functions with the same name will not work - MIPS 
-
-Unwieldy structures - very long lines
-
-No analysis about how many registers are required by which block. Doing this could mean that we avoid having to write things out to RAM (slow) and subsequently load them back in when control returns (slow).
-
-Heuristic for removing variables that were assigned first, not necessarily helpful.
-
-Optimization should be done in blocks - but doing it over fns at the mo
-
-Liveness check not completed
-
-Global variables do not work in code generator, all other examples should be OK
-
-
-Should be using arguments registers $a0-$a3, decided to use stack for ease of use.
-
-
-Wasteful on heap space - didn't find a way to free in SPIM anyway (Usually heap assignment requires GC).
-
-Registers \$t0-\$t9 usable by user program, \$s registers completely RESERVED for internal use (V WASTEFUL) - Could improve by having compiler registers being allocated dynamically using the same allocation methods used for user registers.
-
-
-Could get a lot cleverer about what functions actually do.. If they don't have inner fns or call other functions, we could prevent having to make an activation record in the heap and could create a temporary one in the stack to reduce some code overhead. 
+While the MIPS code generator does have several weaknesses, it is actually very capable as demonstrated by the test results. As probably the most complicated part of the project, it is unsurprising that several problems exist within the implementation.
+\ \\ \ \\
+One issue with the MIPS code generation is that nested functions cannot share the same names, even if they reside in different scopes. The reason for this is that the user defined names are used to generate the function labels. If two functions have the same name, then they will produce the same function label. Obviously at run-time the processor will be unable to determine which one of the functions to invoke and a fatal error will be raised.
+\ \\ \ \\
+MIPS instructions are created within the code generator as a series of \verb!mips_instruction! structures. In order to create these structures, a helper function called \verb!mips! is provided. Because the \verb!mips! function caters for the definition of any valid MIPS instruction, the function contains many parameters and as a result, some very long lines. Because this function is used in many places within \verb!mips.c!, the whole file looks fairly untidy. To remedy this problem, it would be better to split the MIPS instruction set into different types of instruction, depending on the number and type of parameters that they cater for. This would enable much more compact \verb!mips_instruction! helper functions to be created.
+\ \\ \ \\
+Currently no analysis of basic blocks or functions is undertaken to ascertain what runtime support is needed. A lot more could be done to examine whether functions call other functions, whether they use function-typed variables, etc. This analysis would potentially mean that large amounts of code could removed. At the moment, every function has a complex activation record created upon function entry. If the function does not call another function and we have enough registers free, we could actually avoid creating an activation record at all. Additionally, some analysis could be done to ascertain how many registers are required by a function. If the function only requires one or two registers, then it may be possible to preserve all of the caller's registers, instead of writing them out into memory.
+\ \\ \ \\
+The reserved argument registers \$a0-\$a3 are also not used to pass the first four arguments. It was a shame that there was not time to implement this feature. We might even be able to save some activation record space if most of our arguments could fit into registers. At the moment, the code generator takes up a lot of space in the heap due to the number of Activation Records that are allocated. If this were being implemented in a real machine it would be necessary to use some type of garbage collection to reclaim the space that is allocated on the heap. Another waste in the code generator is that user program's are only able to use the \$t registers. Initially this was the case because the compiler needed to use some registers for certain operations. The solution will be discussed in the Further Improvements section.
+\ \\ \ \\
+A final problem with the code generation phase is that global variables do not work. The solution to this is also fairly simple and will be covered in the next section.
